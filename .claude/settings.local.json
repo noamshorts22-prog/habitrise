@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\97250\\\\Desktop\\\\cursor\\\\habitrise-mvp\" && npm install @supabase/ssr 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\97250\\\\Desktop\\\\cursor\\\\habitrise-mvp\" && npm install @supabase/ssr 2>&1 | grep -E \"added|updated|error\")",
+      "Bash(cd \"C:\\\\Users\\\\97250\\\\Desktop\\\\cursor\\\\habitrise-mvp\" && npx tsc --noEmit 2>&1)",
+      "Bash(sleep 3 && start http://localhost:3000)",
+      "Bash(cd \"C:\\\\Users\\\\97250\\\\Desktop\\\\cursor\\\\habitrise-mvp\" && npm run dev)",
+      "Bash(cd \"C:\\\\Users\\\\97250\\\\Desktop\\\\cursor\\\\habitrise-mvp\" && rm -rf .next && npm run dev)",
+      "Bash(sleep 5 && start http://localhost:3000)",
+      "Bash(start http://localhost:3003)",
+      "Bash(start chrome:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}
