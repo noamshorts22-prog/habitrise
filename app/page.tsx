@@ -759,10 +759,13 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
       const { data: prof, error: profErr } = await supabase.from("profiles").select("*").eq("id", uid).maybeSingle();
       if (profErr) throw new Error(profErr.message);
 
-      // Check hero status (sleep / decay)
-      const { data: statusResult } = await supabase.rpc("check_hero_status", { p_user_id: uid });
-      const status = statusResult?.status as "active" | "sleeping" | "decayed" | undefined;
-      setHeroStatus(status ?? "active");
+      // Check hero status (sleep / decay) — safe: ignore if RPC not deployed yet
+      let status: "active" | "sleeping" | "decayed" = "active";
+      try {
+        const { data: statusResult } = await supabase.rpc("check_hero_status", { p_user_id: uid });
+        if (statusResult?.status) status = statusResult.status;
+      } catch { /* RPC not available yet */ }
+      setHeroStatus(status);
 
       // If decayed, re-fetch the profile to get updated streak/level
       if (status === "decayed") {
@@ -856,6 +859,27 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Bottom Nav
 // ─────────────────────────────────────────────────────────────────────────────
+function NavIcon({ id, active, gold, muted }: { id: string; active: boolean; gold: string; muted: string }) {
+  const c = active ? gold : muted;
+  if (id === "home") return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={c}>
+      <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z"/>
+    </svg>
+  );
+  if (id === "profile") return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={c}>
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20C4 16.686 7.582 14 12 14C16.418 14 20 16.686 20 20H4Z"/>
+    </svg>
+  );
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={c}>
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"/>
+    </svg>
+  );
+}
+
 function BottomNav({
   activeTab, setActiveTab, tc, t,
 }: {
@@ -863,11 +887,11 @@ function BottomNav({
   setActiveTab: (tab: typeof TAB_ORDER[number]) => void;
   tc: TC; t: TT;
 }) {
-  const tabs = [
-    { id: "home",     emoji: "🏠", label: t.home     },
-    { id: "profile",  emoji: "👤", label: t.profile  },
-    { id: "settings", emoji: "⚙️", label: t.settings },
-  ] as const;
+  const tabs: { id: string; label: string }[] = [
+    { id: "home",     label: t.home     },
+    { id: "profile",  label: t.profile  },
+    { id: "settings", label: t.settings },
+  ];
 
   return (
     <nav style={{
@@ -876,25 +900,30 @@ function BottomNav({
       borderTop: `1px solid ${tc.navBorder}`,
       backdropFilter: "blur(24px)",
       display: "flex", justifyContent: "space-around",
-      padding: "10px 0 14px",
+      padding: "10px 0 18px",
     }}>
+      <style>{`
+        @keyframes navIconBounce {
+          0%   { transform: translateY(0) scale(1); }
+          40%  { transform: translateY(-5px) scale(1.2); }
+          70%  { transform: translateY(1px) scale(0.95); }
+          100% { transform: translateY(0) scale(1); }
+        }
+      `}</style>
       {tabs.map(tab => {
         const isActive = activeTab === tab.id;
         return (
           <button key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 20px", position: "relative" }}>
+            onClick={() => setActiveTab(tab.id as typeof TAB_ORDER[number])}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "4px 24px", minWidth: 72 }}>
             <span
               key={isActive ? `${tab.id}-on` : `${tab.id}-off`}
-              style={{ fontSize: 22, display: "block", animation: isActive ? "navBounce 0.4s ease-out" : "none" }}>
-              {tab.emoji}
+              style={{ display: "block", filter: isActive ? `drop-shadow(0 0 6px ${tc.gold}88)` : "none", animation: isActive ? "navIconBounce 0.4s cubic-bezier(0.34,1.56,0.64,1)" : "none" }}>
+              <NavIcon id={tab.id} active={isActive} gold={tc.gold} muted={tc.textSub} />
             </span>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: isActive ? tc.gold : tc.textSub, transition: "color 0.2s ease" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: isActive ? tc.gold : tc.textSub, transition: "color 0.2s ease" }}>
               {tab.label}
             </span>
-            {isActive && (
-              <div style={{ height: 2, borderRadius: 1, backgroundColor: tc.gold, animation: "underlineGrow 0.3s ease-out forwards", position: "absolute", bottom: 0 }} />
-            )}
           </button>
         );
       })}
@@ -1098,32 +1127,14 @@ const xpPct    = xpPercent(profile.total_xp);
           </div>
         )}
 
-        {/* Streak */}
-        <div className="flex flex-col items-center gap-1" style={{ animation: "fadeSlideUp 0.5s 200ms ease-out both" }}>
-          <span className="text-8xl font-black leading-none" style={{ color: tc.goldLight, fontFamily: CINZEL }}>{profile.current_streak}</span>
-          <span className="text-sm font-semibold tracking-[0.3em] uppercase" style={{ color: tc.gold }}>{t.dayStreak}</span>
-          <div className="mt-1 w-16 h-px rounded-full" style={{ backgroundColor: tc.gold, opacity: 0.3 }} />
-        </div>
-
-        {/* XP Bar */}
-        <div style={{ width: 320, animation: "fadeSlideUp 0.5s 300ms ease-out both" }} className="flex flex-col gap-2">
-          <div className="flex justify-between text-xs font-semibold" style={{ color: tc.gold, opacity: 0.6 }}>
-            <span>{xpInLvl} XP</span>
-            <span>{xpToNext} {t.xpToNext} {profile.level + 1}</span>
-          </div>
-          <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: tc.xpTrack }}>
-            <div className="h-full rounded-full" style={{ width: `${xpPct}%`, backgroundColor: tc.gold, transition: "width 1.2s ease-out" }} />
-          </div>
-        </div>
-
-        {/* Daily Quote */}
+        {/* Daily Quote — above habit card */}
         <DailyQuote lang={lang} tc={tc} />
 
-        {/* Habit Card */}
-        <div style={{ width: "100%", animation: "fadeSlideUp 0.5s 400ms ease-out both" }}>
+        {/* Habit Card — right after hero */}
+        <div style={{ width: "100%", animation: "fadeSlideUp 0.5s 200ms ease-out both" }}>
           <div onClick={!completedToday && !checking ? handleCheck : undefined}
             className="btn-gold"
-            style={{ position: "relative", overflow: "hidden", backgroundColor: completedToday ? `${tc.gold}12` : tc.card, border: `2px solid ${completedToday ? tc.gold : tc.border}`, borderRadius: 20, padding: "22px 24px", display: "flex", alignItems: "center", gap: 18, cursor: completedToday ? "default" : "pointer", opacity: checking ? 0.6 : 1, transition: "border-color 0.3s, background-color 0.3s" }}>
+            style={{ position: "relative", overflow: "hidden", backgroundColor: completedToday ? `${tc.gold}12` : tc.card, border: `1px solid ${completedToday ? tc.gold : "rgba(201,168,76,0.1)"}`, borderRadius: 16, padding: "22px 24px", display: "flex", alignItems: "center", gap: 18, cursor: completedToday ? "default" : "pointer", opacity: checking ? 0.6 : 1, transition: "border-color 0.3s, background-color 0.3s", boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
             {completedToday && (
               <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.18) 50%, transparent 100%)", backgroundSize: "300% auto", animation: "shimmer 2.8s linear infinite" }} />
             )}
@@ -1135,10 +1146,10 @@ const xpPct    = xpPercent(profile.total_xp);
               </div>
             </div>
             <div style={{ position: "relative", flexShrink: 0, zIndex: 1 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", border: `2.5px solid ${tc.gold}`, backgroundColor: completedToday ? tc.gold : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 0.35s ease" }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", border: `2px solid #C9A84C`, backgroundColor: completedToday ? "#C9A84C" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 0.35s ease" }}>
                 {completedToday && (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M4 10L8.5 14.5L16 6" stroke={tc.bg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="30" style={{ animation: "checkDraw 0.4s ease-out forwards" }} />
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10L8.5 14.5L16 6" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="30" style={{ animation: "checkDraw 0.4s ease-out forwards" }} />
                   </svg>
                 )}
               </div>
@@ -1148,6 +1159,30 @@ const xpPct    = xpPercent(profile.total_xp);
             </div>
           </div>
         </div>
+
+        {/* Streak */}
+        <div className="flex flex-col items-center gap-1" style={{ animation: "fadeSlideUp 0.5s 300ms ease-out both" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="text-8xl font-black leading-none" style={{ color: tc.goldLight, fontFamily: CINZEL }}>{profile.current_streak}</span>
+            <span style={{ fontSize: 48 }}>🔥</span>
+          </div>
+          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 500 }}>
+            {lang === "he" ? "רצף נוכחי" : "Current streak"}
+          </span>
+          <div className="mt-1 w-16 h-px rounded-full" style={{ backgroundColor: tc.gold, opacity: 0.3 }} />
+        </div>
+
+        {/* XP Bar */}
+        <div style={{ width: 320, animation: "fadeSlideUp 0.5s 400ms ease-out both" }} className="flex flex-col gap-2">
+          <div className="flex justify-between text-xs font-semibold" style={{ color: tc.gold, opacity: 0.6 }}>
+            <span>{xpInLvl} XP</span>
+            <span>{xpToNext} {t.xpToNext} {profile.level + 1}</span>
+          </div>
+          <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: tc.xpTrack }}>
+            <div className="h-full rounded-full" style={{ width: `${xpPct}%`, backgroundColor: tc.gold, transition: "width 1.2s ease-out" }} />
+          </div>
+        </div>
+
 
       </div>
     </main>
@@ -1192,14 +1227,16 @@ function DailyQuote({ lang, tc }: { lang: Lang; tc: TC }) {
       </span>
       <p style={{
         fontStyle: "italic",
-        fontSize: 14,
-        color: "rgba(240,237,232,0.75)",
+        fontSize: 17,
+        fontWeight: 700,
+        color: "rgba(240,237,232,0.9)",
         textAlign: "center",
         maxWidth: 280,
         lineHeight: 1.6,
         margin: 0,
         padding: "0 28px",
         direction: isRtl ? "rtl" : "ltr",
+        textShadow: "0 2px 12px rgba(201,168,76,0.35), 0 1px 4px rgba(0,0,0,0.5)",
       }}>
         {quote}
       </p>
