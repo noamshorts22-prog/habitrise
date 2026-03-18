@@ -13,7 +13,10 @@
       "Bash(ls:*)",
       "Bash(curl:*)",
       "Bash(node:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

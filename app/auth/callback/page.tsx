@@ -8,16 +8,11 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        router.replace(error ? "/login" : "/");
-      });
-    } else {
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        router.replace(user ? "/" : "/login");
-      });
-    }
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        router.replace("/");
+      }
+    });
   }, [router]);
 
   return (

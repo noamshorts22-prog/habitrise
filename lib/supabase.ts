@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 export type Profile = {
   id: string;
@@ -12,6 +12,7 @@ export type Profile = {
   level: number;
   avatar_stage: number;
   gender: "male" | "female";
+  coins: number;
   created_at: string;
 };
 
@@ -22,7 +23,7 @@ export type HabitLog = {
   habit_type: string;
 };
 
-export const supabase = createClient(
+export const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
@@ -43,6 +44,7 @@ export function makeDefaultProfile(userId: string): Profile {
     level: 1,
     avatar_stage: 1,
     gender: "male",
+    coins: 0,
     created_at: new Date().toISOString(),
   };
 }
