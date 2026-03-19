@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, type Variants } from "framer-motion";
 import {
   supabase,
   makeDefaultProfile,
@@ -297,6 +298,26 @@ export default function Root() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Welcome / Intro Screen
 // ─────────────────────────────────────────────────────────────────────────────
+const welcomeContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
+};
+
+const welcomeFadeUp: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
+};
+
+const welcomeScaleIn: Variants = {
+  hidden: { opacity: 0, scale: 0.7 },
+  show: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.34, 1.56, 0.64, 1] } },
+};
+
+const welcomeSlideRight: Variants = {
+  hidden: { opacity: 0, x: 30 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
 function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   const features = [
     { emoji: "🎯", title: "בנה הרגלים", desc: "בחר הרגל יומי ושמור על רצף" },
@@ -307,18 +328,13 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <main className="login-main" style={{ background: "linear-gradient(180deg, #0D0D1F 0%, #060610 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
       <style>{`
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes logoFloat { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
         @keyframes glowPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.18; } 50% { transform: translate(-50%,-50%) scale(1.12); opacity: 0.32; } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes ctaPulse { 0%,100% { box-shadow: 0 0 30px rgba(201,168,76,0.3); } 50% { box-shadow: 0 0 50px rgba(201,168,76,0.5); } }
         @keyframes flicker { 0%,100% { opacity: 0.1; } 50% { opacity: 0.8; } }
         @keyframes goldFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .login-main { min-height: 100vh; min-height: 100dvh; padding: 0 32px; }
         .logo-wrap { width: 200px; height: 200px; }
-        .welcome-btn:active { transform: scale(0.96); }
         @media (max-width: 400px) {
           .logo-wrap { width: 140px; height: 140px; }
           .login-main { padding: 0 20px; }
@@ -361,46 +377,70 @@ function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
       {/* Glow orb */}
       <div style={{ position: "absolute", top: "25%", left: "50%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%)", animation: "glowPulse 5s ease-in-out infinite", pointerEvents: "none" }} />
 
-      {/* Logo */}
-      <div style={{ animation: "scaleIn 0.6s 0s ease-out both", marginBottom: 8 }}>
-        <div className="logo-wrap" style={{ animation: "logoFloat 4s ease-in-out infinite" }}>
-          <div className="logo-wrap" style={{ position: "relative" }}>
-            <div style={{ position: "absolute", top: "50%", left: "50%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.18) 0%, transparent 70%)", pointerEvents: "none", animation: "glowPulse 4s ease-in-out infinite" }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/habitrise-icon.png" alt="HabitRise" style={{ width: "100%", height: "100%", objectFit: "contain", position: "relative", zIndex: 1, filter: "drop-shadow(0 0 30px rgba(201,168,76,0.9)) drop-shadow(0 0 60px rgba(201,168,76,0.6)) drop-shadow(0 0 120px rgba(201,168,76,0.4))" }} />
-          </div>
-        </div>
-      </div>
-
-      <h1 style={{ fontFamily: CINZEL, fontWeight: 900, color: "#C9A84C", fontSize: 48, letterSpacing: "0.14em", lineHeight: 1, margin: 0, textShadow: "0 0 40px rgba(201,168,76,0.55)", animation: "fadeUp 0.5s 0.2s ease-out both" }}>
-        HabitRise
-      </h1>
-      <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.45em", textTransform: "uppercase", color: "#C9A84C", opacity: 0.35, marginTop: 8, animation: "fadeIn 0.5s 0.35s ease-out both" }}>
-        Rise Every Day
-      </span>
-
-      {/* Features */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 40, width: "100%", maxWidth: 340, zIndex: 1 }}>
-        {features.map((f, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", borderRadius: 16, backgroundColor: "rgba(17,24,48,0.6)", border: "1px solid rgba(201,168,76,0.12)", backdropFilter: "blur(8px)", animation: `slideInRight 0.5s ${0.4 + i * 0.15}s ease-out both` }}>
-            <span style={{ fontSize: 32, flexShrink: 0 }}>{f.emoji}</span>
-            <div style={{ direction: "rtl" }}>
-              <div style={{ color: "#C9A84C", fontSize: 16, fontWeight: 800, fontFamily: CINZEL }}>{f.title}</div>
-              <div style={{ color: "rgba(201,168,76,0.5)", fontSize: 13, fontWeight: 500, marginTop: 2 }}>{f.desc}</div>
+      {/* Animated content container */}
+      <motion.div
+        variants={welcomeContainer}
+        initial="hidden"
+        animate="show"
+        style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", zIndex: 1 }}
+      >
+        {/* Logo */}
+        <motion.div variants={welcomeScaleIn} style={{ marginBottom: 8 }}>
+          <div className="logo-wrap" style={{ animation: "logoFloat 4s ease-in-out infinite" }}>
+            <div className="logo-wrap" style={{ position: "relative" }}>
+              <div style={{ position: "absolute", top: "50%", left: "50%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.18) 0%, transparent 70%)", pointerEvents: "none", animation: "glowPulse 4s ease-in-out infinite" }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/habitrise-icon.png" alt="HabitRise" style={{ width: "100%", height: "100%", objectFit: "contain", position: "relative", zIndex: 1, filter: "drop-shadow(0 0 30px rgba(201,168,76,0.9)) drop-shadow(0 0 60px rgba(201,168,76,0.6)) drop-shadow(0 0 120px rgba(201,168,76,0.4))" }} />
             </div>
           </div>
-        ))}
-      </div>
+        </motion.div>
 
-      {/* CTA */}
-      <div style={{ width: "100%", maxWidth: 340, marginTop: 40, animation: "fadeUp 0.5s 0.9s ease-out both", zIndex: 1 }}>
-        <button
-          className="welcome-btn"
-          onClick={onContinue}
-          style={{ width: "100%", padding: "18px 24px", borderRadius: 16, background: "linear-gradient(135deg, #8B6914, #C9A84C)", border: "none", color: "#0D0D1F", fontWeight: 900, fontSize: 18, fontFamily: CINZEL, cursor: "pointer", letterSpacing: "0.1em", animation: "ctaPulse 2.5s 1.5s ease-in-out infinite", transition: "transform 0.15s ease" }}>
-          {"בוא נתחיל 🚀"}
-        </button>
-      </div>
+        <motion.h1
+          variants={welcomeFadeUp}
+          style={{ fontFamily: CINZEL, fontWeight: 900, color: "#C9A84C", fontSize: 48, letterSpacing: "0.14em", lineHeight: 1, margin: 0, textShadow: "0 0 40px rgba(201,168,76,0.55)" }}
+        >
+          HabitRise
+        </motion.h1>
+
+        <motion.span
+          variants={welcomeFadeUp}
+          style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.45em", textTransform: "uppercase", color: "#C9A84C", opacity: 0.35, marginTop: 8 }}
+        >
+          Rise Every Day
+        </motion.span>
+
+        {/* Features */}
+        <motion.div
+          variants={welcomeContainer}
+          style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 40, width: "100%", maxWidth: 340 }}
+        >
+          {features.map((f, i) => (
+            <motion.div
+              key={i}
+              variants={welcomeSlideRight}
+              style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", borderRadius: 16, backgroundColor: "rgba(17,24,48,0.6)", border: "1px solid rgba(201,168,76,0.12)", backdropFilter: "blur(8px)" }}
+            >
+              <span style={{ fontSize: 32, flexShrink: 0 }}>{f.emoji}</span>
+              <div style={{ direction: "rtl" }}>
+                <div style={{ color: "#C9A84C", fontSize: 16, fontWeight: 800, fontFamily: CINZEL }}>{f.title}</div>
+                <div style={{ color: "rgba(201,168,76,0.5)", fontSize: 13, fontWeight: 500, marginTop: 2 }}>{f.desc}</div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* CTA */}
+        <motion.div variants={welcomeFadeUp} style={{ width: "100%", maxWidth: 340, marginTop: 40 }}>
+          <motion.button
+            onClick={onContinue}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{ width: "100%", padding: "18px 24px", borderRadius: 16, background: "linear-gradient(135deg, #8B6914, #C9A84C)", border: "none", color: "#0D0D1F", fontWeight: 900, fontSize: 18, fontFamily: CINZEL, cursor: "pointer", letterSpacing: "0.1em", animation: "ctaPulse 2.5s 1.5s ease-in-out infinite" }}
+          >
+            {"בוא נתחיל 🚀"}
+          </motion.button>
+        </motion.div>
+      </motion.div>
     </main>
   );
 }
