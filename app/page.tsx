@@ -1680,14 +1680,14 @@ function SettingsTab({
             <div style={{ color: tc.textSub, fontSize: 11, fontWeight: 600, marginBottom: 8, direction: isHe ? "rtl" : "ltr" }}>
               {isHe ? "שעת תזכורת:" : "Reminder time:"}
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {[18, 19, 20, 21, 22].map(h => (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(9, auto)", gap: 6, justifyContent: "start" }}>
+              {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22].map(h => (
                 <button key={h} onClick={() => changeHour(h)}
                   style={{
-                    padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${reminderHour === h ? tc.gold : tc.border}`,
+                    padding: "7px 10px", borderRadius: 10, border: `1.5px solid ${reminderHour === h ? tc.gold : tc.border}`,
                     backgroundColor: reminderHour === h ? `${tc.gold}18` : "transparent",
                     color: reminderHour === h ? tc.gold : tc.textSub,
-                    fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.2s ease",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s ease",
                   }}>
                   {`${h}:00`}
                 </button>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
+import { toZonedTime } from "date-fns-tz";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const currentHour = (new Date().getUTCHours() + 3) % 24; // Israel UTC+3, wrap around midnight
+  const israelTime = toZonedTime(new Date(), "Asia/Jerusalem");
+  const currentHour = israelTime.getHours();
 
   const { data: subs, error } = await supabaseAdmin
     .from("push_subscriptions")
@@ -44,24 +46,43 @@ export async function GET(req: NextRequest) {
 
   const completedSet = new Set((completedToday || []).map((r) => r.user_id));
   const pending = subs.filter((s) => !completedSet.has(s.user_id));
+  const completed = subs.filter((s) => completedSet.has(s.user_id));
+
+  const pendingMessages = [
+    { title: "הגיבור שלך מחכה לך 🔥", body: "אל תשבור את הסטריק!" },
+    { title: "יום אחד לא מספיק לשנות הרות ⚡", body: "תסמן עכשיו" },
+    { title: "💪 עוד יום אחד ואתה מנצח", body: "אל תחמיץ את זה" },
+  ];
 
   let sent = 0;
-  await Promise.allSettled(
-    pending.map(async (s) => {
+  await Promise.allSettled([
+    ...completed.map(async (s) => {
       try {
         await webpush.sendNotification(
           s.subscription,
           JSON.stringify({
-            title: "הגיבור שלך מחכה לך 🔥",
-            body: "הסטריק שלך בסכנה — סמן את ההרגל עכשיו",
+            title: "כל הכבוד! 🏆",
+            body: "סימנת את ההרגל היום — הגיבור שלך גאה בך!",
           })
         );
         sent++;
       } catch {
         await supabaseAdmin.from("push_subscriptions").delete().eq("user_id", s.user_id);
       }
-    })
-  );
+    }),
+    ...pending.map(async (s) => {
+      const msg = pendingMessages[Math.floor(Math.random() * pendingMessages.length)];
+      try {
+        await webpush.sendNotification(
+          s.subscription,
+          JSON.stringify({ title: msg.title, body: msg.body })
+        );
+        sent++;
+      } catch {
+        await supabaseAdmin.from("push_subscriptions").delete().eq("user_id", s.user_id);
+      }
+    }),
+  ]);
 
-  return NextResponse.json({ sent, total: pending.length, currentHour });
+  return NextResponse.json({ sent, total: subs.length, completed: completed.length, pending: pending.length, currentHour });
 }
