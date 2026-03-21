@@ -888,7 +888,7 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
       <div key={activeTab} style={{ animation: "tabSlideIn 0.3s ease-out both", paddingBottom: 88 }}>
         {activeTab === "home"     && <HomeTab     user={user} profile={profile} setProfile={setProfile} completedToday={completedToday} setCompletedToday={setCompletedToday} tc={tc} t={t} lang={lang} themeKey={themeKey} heroStatus={heroStatus} setHeroStatus={setHeroStatus} />}
         {activeTab === "profile"  && <ProfileTab  user={user} profile={profile} setProfile={setProfile} tc={tc} t={t} lang={lang} themeKey={themeKey} />}
-        {activeTab === "settings" && <SettingsTab onSignOut={onSignOut} tc={tc} t={t} lang={lang} themeKey={themeKey} onChangeLang={changeLang} onChangeTheme={changeTheme} />}
+        {activeTab === "settings" && <SettingsTab user={user} onSignOut={onSignOut} tc={tc} t={t} lang={lang} themeKey={themeKey} onChangeLang={changeLang} onChangeTheme={changeTheme} />}
       </div>
 
       <BottomNav activeTab={activeTab} setActiveTab={switchTab} tc={tc} t={t} />
@@ -1518,9 +1518,9 @@ function ChangeHabitModal({
 // Settings Tab
 // ─────────────────────────────────────────────────────────────────────────────
 function SettingsTab({
-  onSignOut, tc, t, lang, themeKey, onChangeLang, onChangeTheme,
+  user, onSignOut, tc, t, lang, themeKey, onChangeLang, onChangeTheme,
 }: {
-  onSignOut: () => void; tc: TC; t: TT; lang: Lang;
+  user: User; onSignOut: () => void; tc: TC; t: TT; lang: Lang;
   themeKey: ThemeKey; onChangeLang: (l: Lang) => void; onChangeTheme: (k: ThemeKey) => void;
 }) {
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -1565,6 +1565,7 @@ function SettingsTab({
     if (reminderEnabled) {
       setReminderEnabled(false);
       localStorage.setItem("hr-reminder", "0");
+      await supabase.from("push_subscriptions").delete().eq("user_id", user.id);
       return;
     }
     if (notifUnsupported || notifBlocked) return;
@@ -1573,6 +1574,18 @@ function SettingsTab({
       if ("Notification" in window) {
         const perm = await Notification.requestPermission();
         if (perm === "granted") {
+          const registration = await navigator.serviceWorker.ready;
+          const sub = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+          });
+          const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          await supabase.from("push_subscriptions").upsert({
+            user_id: user.id,
+            subscription: sub.toJSON(),
+            reminder_hour: reminderHour,
+            timezone,
+          }, { onConflict: "user_id" });
           setReminderEnabled(true);
           localStorage.setItem("hr-reminder", "1");
         } else if (perm === "denied") {
@@ -1583,9 +1596,12 @@ function SettingsTab({
     setPushLoading(false);
   }
 
-  function changeHour(h: number) {
+  async function changeHour(h: number) {
     setReminderHour(h);
     localStorage.setItem("hr-reminder-hour", String(h));
+    if (reminderEnabled) {
+      await supabase.from("push_subscriptions").update({ reminder_hour: h }).eq("user_id", user.id);
+    }
   }
 
   return (
