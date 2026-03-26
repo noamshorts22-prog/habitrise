@@ -101,3 +101,20 @@
 - Opus: new full screens, auth flow, complex bugs,
   multi-file refactors
 - Default: always try Sonnet first
+
+## Git Rules for Agents
+Before making ANY changes:
+  git add .
+  git commit -m "snapshot: before [description]"
+
+After finishing successfully:
+  git add .
+  git commit -m "fix: [what was done]"
+
+Branch per day:
+  git checkout -b YYYY-MM-DD
+
+To restore if something breaks:
+  git checkout .          ← discard all changes
+  git log --oneline       ← see all versions
+  git checkout [hash] .   ← restore specific version

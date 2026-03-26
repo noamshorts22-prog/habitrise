@@ -1059,7 +1059,7 @@ const xpPct    = xpPercent(profile.total_xp);
             <div className="tracking-wide text-center" style={{ color: tc.goldLight, fontSize: 24, fontWeight: 700, textShadow: `0 0 20px ${tc.gold}66`, fontFamily: CINZEL }}>
               {profile.username || "Hero"}
             </div>
-            <span className="text-xs uppercase" style={{ fontFamily: INTER, fontWeight: 300, letterSpacing: "0.2em", color: tc.goldLight, opacity: 0.6 }}>
+            <span className="text-xs uppercase" style={{ fontFamily: INTER, fontWeight: 300, letterSpacing: "0.2em", color: themeKey === "light" ? "rgba(0,0,0,0.6)" : tc.goldLight, opacity: themeKey === "light" ? 1 : 0.6 }}>
               {t.stage} {avatarStage} · {t.level} {profile.level}
             </span>
           </div>
@@ -1078,7 +1078,7 @@ const xpPct    = xpPercent(profile.total_xp);
         )}
 
         {/* Daily Quote — above habit card */}
-        <DailyQuote lang={lang} tc={tc} />
+        <DailyQuote lang={lang} tc={tc} themeKey={themeKey} />
 
         {/* Habit Card — Swipe to Complete */}
         <SwipeHabitCard
@@ -1423,31 +1423,33 @@ function SwipeHabitCard({
 // ─────────────────────────────────────────────────────────────────────────────
 // Daily Quote
 // ─────────────────────────────────────────────────────────────────────────────
-function DailyQuote({ lang, tc }: { lang: Lang; tc: TC }) {
+function DailyQuote({ lang, tc, themeKey }: { lang: Lang; tc: TC; themeKey: ThemeKey }) {
   const quotes = MOTIVATIONAL_QUOTES[lang];
   const todayIndex = new Date().getDate() % quotes.length;
   const quote = quotes[todayIndex];
   return (
     <div style={{
       width: "100%",
-      height: 80,
+      minHeight: 90,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       position: "relative",
-      animation: "quoteIn 1s ease-out both",
+      animation: "quoteIn 1.2s ease-out both",
+      padding: "8px 0",
     }}>
-      <style>{`@keyframes quoteIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      <style>{`
+        @keyframes quoteIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
       {/* Decorative opening quote */}
       <span style={{
         position: "absolute",
-        left: 0,
-        right: "auto",
-        top: -4,
-        fontSize: 48,
+        left: 4,
+        top: -8,
+        fontSize: 64,
         lineHeight: 1,
         color: tc.gold,
-        opacity: 0.15,
+        opacity: 0.2,
         fontFamily: "Georgia, serif",
         userSelect: "none",
         pointerEvents: "none",
@@ -1456,19 +1458,33 @@ function DailyQuote({ lang, tc }: { lang: Lang; tc: TC }) {
       </span>
       <p style={{
         fontStyle: "italic",
-        fontSize: 17,
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        fontSize: 16,
         fontWeight: 700,
-        color: "rgba(240,237,232,0.9)",
+        letterSpacing: "0.02em",
+        color: themeKey === "light" ? "rgba(0,0,0,0.45)" : "rgba(240,237,232,0.85)",
         textAlign: "center",
-        maxWidth: 280,
-        lineHeight: 1.6,
+        maxWidth: 300,
+        lineHeight: 1.75,
         margin: 0,
-        padding: "0 28px",
+        padding: "0 36px",
         direction: "ltr",
-        textShadow: "0 2px 12px rgba(201,168,76,0.35), 0 1px 4px rgba(0,0,0,0.5)",
+        textShadow: themeKey === "light" ? "none" : "0 1px 8px rgba(201,168,76,0.2)",
       }}>
         {quote}
       </p>
+      {/* Thin gold divider lines */}
+      <span style={{
+        position: "absolute",
+        bottom: 0,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: 40,
+        height: 1,
+        background: `linear-gradient(90deg, transparent, ${tc.gold}, transparent)`,
+        opacity: 0.4,
+        display: "block",
+      }} />
     </div>
   );
 }
