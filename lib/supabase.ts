@@ -62,6 +62,18 @@ export function todayRange() {
   return { from: `${d}T00:00:00`, to: `${d}T23:59:59` };
 }
 
+/** Returns ISO range from Monday 00:00 to now (current week). */
+export function weekRange() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon, ...
+  const diffToMon = day === 0 ? 6 : day - 1; // days since Monday
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMon);
+  const monStr = monday.toISOString().split("T")[0];
+  const nowStr = now.toISOString();
+  return { from: `${monStr}T00:00:00`, to: nowStr };
+}
+
 export function xpProgressInLevel(totalXp: number) {
   return totalXp % XP_PER_LEVEL;
 }

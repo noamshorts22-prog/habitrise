@@ -7,7 +7,7 @@ const cinzel = Cinzel({
   subsets: ["latin"],
   variable: "--font-cinzel",
   display: "swap",
-  weight: ["400", "700", "900"],
+  weight: ["400", "600", "700", "900"],
 });
 
 const inter = Inter({
@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="he" className={`${cinzel.variable} ${inter.variable}`}>
+    <html lang="en" className={`${cinzel.variable} ${inter.variable}`}>
       <head>
         <meta name="theme-color" content="#C9A84C" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

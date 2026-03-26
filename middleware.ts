@@ -27,15 +27,47 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    request.nextUrl.pathname !== "/" &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth/callback")
-  ) {
+  const pathname = request.nextUrl.pathname;
+  const isPublic =
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth/callback") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms");
+
+  console.log("MW pathname:", pathname, "| user:", user?.id ?? "none", "| isPublic:", isPublic);
+
+  // Not logged in → onboarding (unless already on a public page)
+  if (!user && !isPublic) {
+    console.log("MW → redirect to /onboarding (no user)");
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/onboarding";
     return NextResponse.redirect(url);
+  }
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+
+    const hasUsername = profile && profile.username;
+    console.log("MW profile username:", profile?.username ?? "NULL", "| hasUsername:", !!hasUsername);
+
+    // Logged in + no username → send to onboarding (unless already on a public page)
+    if (!hasUsername && !isPublic) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    // Logged in + has username + still on onboarding/login → send to home
+    if (hasUsername && (pathname.startsWith("/onboarding") || pathname.startsWith("/login"))) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

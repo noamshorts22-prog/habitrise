@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, type Variants } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import {
   supabase,
   makeDefaultProfile,
   XP_PER_COMPLETION,
   XP_PER_LEVEL,
   todayRange,
+  weekRange,
   xpPercent,
-  computeAvatarStage,
   type Profile,
 } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -18,10 +18,10 @@ import type { User } from "@supabase/supabase-js";
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 const HABITS = [
-  { emoji: "🏃", label: "ספורט יומי",  labelEn: "Daily Sport",   value: "ספורט יומי" },
-  { emoji: "📚", label: "קריאה יומית", labelEn: "Daily Reading", value: "קריאה יומית" },
-  { emoji: "🧘", label: "מדיטציה",     labelEn: "Meditation",    value: "מדיטציה" },
-  { emoji: "💧", label: "שתיית מים",   labelEn: "Drink Water",   value: "שתיית מים" },
+  { emoji: "🏃", label: "Daily Sport",   labelEn: "Daily Sport",   value: "Daily Sport" },
+  { emoji: "📚", label: "Daily Reading", labelEn: "Daily Reading", value: "Daily Reading" },
+  { emoji: "🧘", label: "Meditation",    labelEn: "Meditation",    value: "Meditation" },
+  { emoji: "💧", label: "Drink Water",   labelEn: "Drink Water",   value: "Drink Water" },
 ];
 
 const BG_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
@@ -79,53 +79,53 @@ const MOTIVATIONAL_QUOTES = {
     "Legends aren't born. They're built — one day at a time.",
   ],
   he: [
-    "כדי להיות ב-1% צריך לעשות מה ש-99% לא עושים.",
-    "אני עושה את זה בכל מקרה.",
-    "1.01³⁶⁵ = 37.7. אחוז אחד טוב יותר כל יום.",
-    "הכאב של משמעת שוקל גרמים. הכאב של חרטה שוקל טונות.",
-    "אתה לא עולה לרמת המטרות שלך. אתה נופל לרמת המערכות שלך.",
-    "כל חזרה שאתה עושה כשלא בא לך — היא זו שמשנה אותך.",
-    "הגרסה שמוותרת והגרסה שלא — אותו מאמץ, חיים שונים לגמרי.",
-    "אלופים לא נוצרים באולם. הם מתגלים שם.",
-    "עשה את זה כשאתה עייף. עשה את זה כשאתה פוחד. עשה את זה בכל מקרה.",
-    "העצמי העתידי שלך צופה בך עכשיו דרך הזיכרונות שלו.",
-    "עוד יום אחד. זהו. עוד יום אחד.",
-    "החלק הקשה הוא לא להתחיל. זה לחזור מחר.",
-    "מוטיבציה מתחילה אותך. זהות ממשיכה אותך.",
-    "אתה לא מפגר. אתה בדיוק במקום שבו העבודה מתחילה.",
-    "שיפורים יומיים קטנים הם המפתח לתוצאות עצומות לטווח ארוך.",
-    "המשמעת היא לבחור בין מה שאתה רוצה עכשיו למה שאתה רוצה הכי הרבה.",
-    "אל תספור ימים. תעשה שהימים יספרו.",
-    "קום. הופיע. עלה רמה.",
-    "הסטריק שלך הוא הבטחה שנתת לעצמך. שמור עליה.",
-    "כל יום שאתה מגיע, העתיד שלך נעשה קל יותר.",
-    "האימון היחיד שמצטער עליו הוא זה שלא עשית.",
-    "ימים קשים בונים לוחמים חזקים.",
-    "כבר התחלת. זה קשה יותר ממה שרוב האנשים אי פעם מגיעים אליו.",
-    "המאמץ של היום הוא הכוח של מחר.",
-    "גיבורים לא נולדים. הם נבנים — יום אחד בכל פעם.",
+    "To be in the 1%, you must do what the 99% won't.",
+    "I do it anyway.",
+    "1.01³⁶⁵ = 37.7. One percent better every day.",
+    "The pain of discipline weighs ounces. The pain of regret weighs tons.",
+    "You don't rise to the level of your goals. You fall to the level of your systems.",
+    "Every rep you do when you don't want to is the one that changes you.",
+    "The version of you that quits and the version that doesn't — same effort, different life.",
+    "Champions aren't made in the gym. They're revealed there.",
+    "Do it tired. Do it scared. Do it anyway.",
+    "Your future self is watching you right now through your memories.",
+    "One more day. That's all. One more day.",
+    "The hard part isn't starting. It's showing up again tomorrow.",
+    "Motivation gets you started. Identity keeps you going.",
+    "You are not behind. You are exactly where the work begins.",
+    "Small daily improvements are the key to staggering long-term results.",
+    "Discipline is choosing between what you want now and what you want most.",
+    "Don't count the days. Make the days count.",
+    "Wake up. Show up. Level up.",
+    "Your streak is a promise you made to yourself. Keep it.",
+    "Every day you show up, your future gets lighter.",
+    "The only workout you regret is the one you didn't do.",
+    "Hard days build the strongest warriors.",
+    "You've already started. That's harder than most people ever get.",
+    "Today's effort is tomorrow's strength.",
+    "Legends aren't born. They're built — one day at a time.",
   ],
 };
 
-const MONTH_NAMES_HE = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+const MONTH_NAMES_HE = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const MONTH_NAMES_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const TAB_ORDER = ["home", "profile", "settings"] as const;
+const TAB_ORDER = ["home", "profile", "shop", "settings"] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Translations
 // ─────────────────────────────────────────────────────────────────────────────
 const TRANS = {
   he: {
-    home: "בית", profile: "פרופיל", settings: "הגדרות",
-    dayStreak: "ימי רצף", longestStreak: "הכי ארוך",
-    changeHabit: "שנה הרגל", signOut: "התנתקות",
-    language: "שפה", darkMode: "מצב כהה",
-    level: "רמה", xpToNext: "ל-רמה הבאה", stage: "שלב",
-    chooseHabit: "בחר הרגל", save: "שמור", cancel: "ביטול",
-    currentMonth: "החודש",
+    home: "Home", profile: "Profile", shop: "Shop", settings: "Settings",
+    dayStreak: "Day Streak", longestStreak: "Longest",
+    changeHabit: "Change Habit", signOut: "Sign Out",
+    language: "Language", darkMode: "Dark Mode",
+    level: "Level", xpToNext: "to next level", stage: "Stage",
+    chooseHabit: "Choose Habit", save: "Save", cancel: "Cancel",
+    currentMonth: "This Month",
   },
   en: {
-    home: "Home", profile: "Profile", settings: "Settings",
+    home: "Home", profile: "Profile", shop: "Shop", settings: "Settings",
     dayStreak: "Day Streak", longestStreak: "Longest",
     changeHabit: "Change Habit", signOut: "Sign Out",
     language: "Language", darkMode: "Dark Mode",
@@ -136,7 +136,7 @@ const TRANS = {
 } as const;
 type Lang = keyof typeof TRANS;
 type TT = {
-  home: string; profile: string; settings: string;
+  home: string; profile: string; shop: string; settings: string;
   dayStreak: string; longestStreak: string;
   changeHabit: string; signOut: string;
   language: string; darkMode: string;
@@ -150,11 +150,11 @@ type TT = {
 // ─────────────────────────────────────────────────────────────────────────────
 const THEMES: Record<"dark" | "light", TC> = {
   dark: {
-    bg: "#0D0D1F", card: "#111830", card2: "#0A0A18",
+    bg: "#080810", card: "#111830", card2: "#0A0A18",
     border: "rgba(201,168,76,0.2)", borderStrong: "rgba(201,168,76,0.5)",
     text: "#F0EAD6", textSub: "#8A8FA8", textMuted: "rgba(240,234,214,0.35)",
     gold: "#C9A84C", goldLight: "#E8C96A",
-    navBg: "rgba(8,8,20,0.97)", navBorder: "rgba(201,168,76,0.25)",
+    navBg: "rgba(8,8,16,0.9)", navBorder: "rgba(201,168,76,0.1)",
     calEmpty: "#0D1428", calBorder: "rgba(201,168,76,0.08)",
     toggleOff: "#1e2d5e", inputBg: "#0A0A18",
     xpTrack: "#1a1a3e",
@@ -182,11 +182,22 @@ type TC = {
 };
 
 const CINZEL = "var(--font-cinzel, 'Cinzel', Georgia, serif)";
+const INTER = "var(--font-inter, 'Inter', system-ui, sans-serif)";
+const LUXURY_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+// Glass morphism presets
+const GLASS = {
+  background: "rgba(255,255,255,0.03)",
+  backdropFilter: "blur(16px)",
+  WebkitBackdropFilter: "blur(16px)",
+  border: "1px solid rgba(201,168,76,0.12)",
+  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+} as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Root — auth gating
 // ─────────────────────────────────────────────────────────────────────────────
-type AppView = "loading" | "welcome" | "login" | "onboarding" | "home";
+type AppView = "loading" | "login" | "onboarding" | "home";
 
 export default function Root() {
   const [view, setView]   = useState<AppView>("loading");
@@ -197,7 +208,7 @@ export default function Root() {
     let mounted = true;
 
     timeoutRef.current = setTimeout(() => {
-      if (mounted) setView(v => v === "loading" ? "welcome" : v);
+      if (mounted) setView(v => v === "loading" ? "login" : v);
     }, 5000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -206,9 +217,7 @@ export default function Root() {
           if (!mounted) return;
 
           if (!session) {
-            // Show welcome screen for first-time visitors, login for returning
-            const seen = localStorage.getItem("hr-welcome-seen");
-            setView(seen ? "login" : "welcome");
+            setView("login");
             return;
           }
 
@@ -250,7 +259,7 @@ export default function Root() {
 
   if (view === "loading") {
     return (
-      <main style={{ backgroundColor: "#0D0D1F", minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" } as React.CSSProperties}>
+      <main style={{ backgroundColor: "#080810", minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" } as React.CSSProperties}>
         <style>{`
           @keyframes loadingPulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
           @keyframes loadingGlow { 0%,100%{ transform:translate(-50%,-50%) scale(1); opacity:0.3; } 50%{ transform:translate(-50%,-50%) scale(1.15); opacity:0.6; } }
@@ -270,10 +279,6 @@ export default function Root() {
     );
   }
 
-  if (view === "welcome") {
-    return <WelcomeScreen onContinue={() => { localStorage.setItem("hr-welcome-seen", "1"); setView("login"); }} />;
-  }
-
   if (view === "login") {
     return <LoginScreen onLogin={() => {}} />;
   }
@@ -290,158 +295,8 @@ export default function Root() {
   return (
     <MainApp
       user={user!}
-      onSignOut={async () => { await supabase.auth.signOut(); setUser(null); setView("login"); }}
+      onSignOut={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
     />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Welcome / Intro Screen
-// ─────────────────────────────────────────────────────────────────────────────
-const welcomeContainer: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
-};
-
-const welcomeFadeUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
-};
-
-const welcomeScaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.7 },
-  show: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.34, 1.56, 0.64, 1] } },
-};
-
-const welcomeSlideRight: Variants = {
-  hidden: { opacity: 0, x: 30 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" } },
-};
-
-function WelcomeScreen({ onContinue }: { onContinue: () => void }) {
-  const features = [
-    { emoji: "🎯", title: "בנה הרגלים", desc: "בחר הרגל יומי ושמור על רצף" },
-    { emoji: "⚡", title: "צבור XP", desc: "כל יום שאתה משלים מרוויח ניקוד" },
-    { emoji: "🏆", title: "עלה רמות", desc: "התקדם, שפר את הדמות שלך והפוך לגיבור" },
-  ];
-
-  return (
-    <main className="login-main" style={{ background: "linear-gradient(180deg, #0D0D1F 0%, #060610 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-      <style>{`
-        @keyframes logoFloat { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
-        @keyframes glowPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.18; } 50% { transform: translate(-50%,-50%) scale(1.12); opacity: 0.32; } }
-        @keyframes ctaPulse { 0%,100% { box-shadow: 0 0 30px rgba(201,168,76,0.3); } 50% { box-shadow: 0 0 50px rgba(201,168,76,0.5); } }
-        @keyframes flicker { 0%,100% { opacity: 0.1; } 50% { opacity: 0.8; } }
-        @keyframes goldFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        .login-main { min-height: 100vh; min-height: 100dvh; padding: 0 32px; }
-        .logo-wrap { width: 200px; height: 200px; }
-        @media (max-width: 400px) {
-          .logo-wrap { width: 140px; height: 140px; }
-          .login-main { padding: 0 20px; }
-        }
-        @media (max-height: 680px) {
-          .logo-wrap { width: 120px; height: 120px; }
-        }
-      `}</style>
-
-      {/* Stars */}
-      {[
-        { left: "8%", top: "10%", size: 2, dur: 2.5, delay: 0.2 },
-        { left: "20%", top: "25%", size: 3, dur: 3.8, delay: 0.9 },
-        { left: "35%", top: "8%", size: 2, dur: 4.2, delay: 1.5 },
-        { left: "55%", top: "15%", size: 2, dur: 2.8, delay: 0.4 },
-        { left: "70%", top: "5%", size: 3, dur: 3.4, delay: 1.1 },
-        { left: "85%", top: "20%", size: 2, dur: 4.6, delay: 0.7 },
-        { left: "92%", top: "40%", size: 2, dur: 2.3, delay: 1.8 },
-        { left: "12%", top: "60%", size: 2, dur: 3.9, delay: 0.3 },
-        { left: "78%", top: "70%", size: 3, dur: 4.1, delay: 1.3 },
-        { left: "45%", top: "85%", size: 2, dur: 3.2, delay: 0.6 },
-        { left: "65%", top: "90%", size: 2, dur: 2.7, delay: 2.0 },
-        { left: "5%", top: "88%", size: 3, dur: 3.6, delay: 1.6 },
-      ].map((s, i) => (
-        <div key={i} style={{ position: "absolute", left: s.left, top: s.top, width: s.size, height: s.size, borderRadius: "50%", backgroundColor: "#ffffff", pointerEvents: "none", animation: `flicker ${s.dur}s ${s.delay}s ease-in-out infinite` }} />
-      ))}
-
-      {/* Gold particles */}
-      {[
-        { left: "10%", top: "30%", size: 2, dur: 4.5, delay: 0.5 },
-        { left: "25%", top: "50%", size: 1, dur: 5.2, delay: 1.2 },
-        { left: "40%", top: "70%", size: 2, dur: 3.8, delay: 0.8 },
-        { left: "60%", top: "35%", size: 1, dur: 6.0, delay: 1.6 },
-        { left: "75%", top: "55%", size: 2, dur: 4.3, delay: 0.3 },
-        { left: "90%", top: "75%", size: 1, dur: 5.5, delay: 2.1 },
-      ].map((p, i) => (
-        <div key={`p${i}`} style={{ position: "absolute", left: p.left, top: p.top, width: p.size, height: p.size, borderRadius: "50%", backgroundColor: "rgba(201,168,76,0.6)", pointerEvents: "none", animation: `goldFloat ${p.dur}s ${p.delay}s ease-in-out infinite` }} />
-      ))}
-
-      {/* Glow orb */}
-      <div style={{ position: "absolute", top: "25%", left: "50%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 70%)", animation: "glowPulse 5s ease-in-out infinite", pointerEvents: "none" }} />
-
-      {/* Animated content container */}
-      <motion.div
-        variants={welcomeContainer}
-        initial="hidden"
-        animate="show"
-        style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", zIndex: 1 }}
-      >
-        {/* Logo */}
-        <motion.div variants={welcomeScaleIn} style={{ marginBottom: 8 }}>
-          <div className="logo-wrap" style={{ animation: "logoFloat 4s ease-in-out infinite" }}>
-            <div className="logo-wrap" style={{ position: "relative" }}>
-              <div style={{ position: "absolute", top: "50%", left: "50%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.18) 0%, transparent 70%)", pointerEvents: "none", animation: "glowPulse 4s ease-in-out infinite" }} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/habitrise-icon.png" alt="HabitRise" style={{ width: "100%", height: "100%", objectFit: "contain", position: "relative", zIndex: 1, filter: "drop-shadow(0 0 30px rgba(201,168,76,0.9)) drop-shadow(0 0 60px rgba(201,168,76,0.6)) drop-shadow(0 0 120px rgba(201,168,76,0.4))" }} />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.h1
-          variants={welcomeFadeUp}
-          style={{ fontFamily: CINZEL, fontWeight: 900, color: "#C9A84C", fontSize: 48, letterSpacing: "0.14em", lineHeight: 1, margin: 0, textShadow: "0 0 40px rgba(201,168,76,0.55)" }}
-        >
-          HabitRise
-        </motion.h1>
-
-        <motion.span
-          variants={welcomeFadeUp}
-          style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.45em", textTransform: "uppercase", color: "#C9A84C", opacity: 0.35, marginTop: 8 }}
-        >
-          Rise Every Day
-        </motion.span>
-
-        {/* Features */}
-        <motion.div
-          variants={welcomeContainer}
-          style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 40, width: "100%", maxWidth: 340 }}
-        >
-          {features.map((f, i) => (
-            <motion.div
-              key={i}
-              variants={welcomeSlideRight}
-              style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", borderRadius: 16, backgroundColor: "rgba(17,24,48,0.6)", border: "1px solid rgba(201,168,76,0.12)", backdropFilter: "blur(8px)" }}
-            >
-              <span style={{ fontSize: 32, flexShrink: 0 }}>{f.emoji}</span>
-              <div style={{ direction: "rtl" }}>
-                <div style={{ color: "#C9A84C", fontSize: 16, fontWeight: 800, fontFamily: CINZEL }}>{f.title}</div>
-                <div style={{ color: "rgba(201,168,76,0.5)", fontSize: 13, fontWeight: 500, marginTop: 2 }}>{f.desc}</div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* CTA */}
-        <motion.div variants={welcomeFadeUp} style={{ width: "100%", maxWidth: 340, marginTop: 40 }}>
-          <motion.button
-            onClick={onContinue}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            style={{ width: "100%", padding: "18px 24px", borderRadius: 16, background: "linear-gradient(135deg, #8B6914, #C9A84C)", border: "none", color: "#0D0D1F", fontWeight: 900, fontSize: 18, fontFamily: CINZEL, cursor: "pointer", letterSpacing: "0.1em", animation: "ctaPulse 2.5s 1.5s ease-in-out infinite" }}
-          >
-            {"בוא נתחיל 🚀"}
-          </motion.button>
-        </motion.div>
-      </motion.div>
-    </main>
   );
 }
 
@@ -501,7 +356,7 @@ const LOGIN_PARTICLES = [
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LoginScreen({ onLogin }: { onLogin: (u: User) => void }) {
   return (
-    <main className="login-main" style={{ background: "linear-gradient(180deg, #0D0D1F 0%, #060610 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+    <main className="login-main" style={{ background: "linear-gradient(180deg, #080810 0%, #040408 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
       <style>{`
         @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes flicker { 0%,100% { opacity: 0.1; } 50% { opacity: 0.8; } }
@@ -512,7 +367,7 @@ function LoginScreen({ onLogin }: { onLogin: (u: User) => void }) {
         @keyframes logoFloat { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
         @keyframes glowPulse { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.18; } 50% { transform: translate(-50%,-50%) scale(1.12); opacity: 0.32; } }
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-        .google-btn:hover { border-color: rgba(201,168,76,0.7) !important; box-shadow: 0 0 40px rgba(201,168,76,0.2) !important; transform: scale(1.02); }
+        .google-btn:hover { border-color: rgba(201,168,76,0.7) !important; box-shadow: 0 0 40px rgba(201,168,76,0.25), inset 0 1px 0 rgba(255,255,255,0.08) !important; transform: scale(1.02); }
         .google-btn { transition: all 0.2s ease; position: relative; overflow: hidden; }
         .shimmer-overlay { position: absolute; inset: 0; border-radius: 16px; background: linear-gradient(90deg, transparent 0%, rgba(255,220,100,0.18) 50%, transparent 100%); background-size: 200% auto; animation: shimmer 3s linear infinite; pointer-events: none; }
         .logo-wrap { width: 200px; height: 200px; }
@@ -554,11 +409,11 @@ function LoginScreen({ onLogin }: { onLogin: (u: User) => void }) {
             </div>
           </div>
         </div>
-        <h1 className="login-title" style={{ fontFamily: CINZEL, fontWeight: 900, color: "#C9A84C", letterSpacing: "0.14em", lineHeight: 1, margin: 0, textShadow: "0 0 40px rgba(201,168,76,0.55)", animation: "fadeUp 0.5s 0.2s ease-out both" }}>
-          HabitRise
+        <h1 className="login-title" style={{ fontFamily: CINZEL, fontWeight: 900, color: "#C9A84C", letterSpacing: "0.15em", lineHeight: 1, margin: 0, textShadow: "0 0 40px rgba(201,168,76,0.55)", animation: "fadeUp 0.5s 0.2s ease-out both" }}>
+          HABITRISE
         </h1>
-        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.45em", textTransform: "uppercase", color: "#C9A84C", opacity: 0.35, animation: "fadeUp 0.5s 0.4s ease-out both" }}>
-          Rise Every Day
+        <span style={{ fontFamily: "var(--font-inter, 'Inter', sans-serif)", fontSize: 11, fontWeight: 300, letterSpacing: "0.3em", textTransform: "uppercase", color: "#C9A84C", opacity: 0.5, animation: "fadeUp 0.5s 0.4s ease-out both" }}>
+          RISE EVERY DAY
         </span>
       </div>
 
@@ -567,7 +422,7 @@ function LoginScreen({ onLogin }: { onLogin: (u: User) => void }) {
         <button
           className="google-btn"
           onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } })}
-          style={{ width: "100%", padding: "17px 24px", borderRadius: 16, background: "linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04))", border: "1.5px solid rgba(201,168,76,0.45)", boxShadow: "0 0 24px rgba(201,168,76,0.1)", color: "#ffffff", fontWeight: 600, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+          style={{ width: "100%", padding: "17px 24px", borderRadius: 16, background: "rgba(255,255,255,0.04)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(201,168,76,0.2)", boxShadow: "0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)", color: "#ffffff", fontWeight: 600, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
           <div className="shimmer-overlay" />
           <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
             <path d="M43.611 20.083H42V20H24v8h11.303C33.953 32.2 29.373 35 24 35c-6.075 0-11-4.925-11-11s4.925-11 11-11c2.804 0 5.354 1.057 7.29 2.79l5.657-5.657C33.83 7.343 29.145 5 24 5 12.954 5 4 13.954 4 25s8.954 20 20 20 20-8.954 20-20c0-1.341-.138-2.65-.389-3.917z" fill="#FFC107"/>
@@ -658,7 +513,7 @@ function OnboardingScreen({ user, onComplete }: { user: User; onComplete: () => 
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen px-6"
-      style={{ background: "linear-gradient(180deg, #0D0D1F 0%, #060610 100%)" }}>
+      style={{ background: "linear-gradient(180deg, #080810 0%, #040408 100%)" }}>
       <style>{`
         @keyframes stepIn  { from { opacity:0; transform:translateX(48px);  } to { opacity:1; transform:translateX(0);    } }
         @keyframes stepOut { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(-48px); } }
@@ -678,14 +533,14 @@ function OnboardingScreen({ user, onComplete }: { user: User; onComplete: () => 
         {step === 1 && (
           <>
             <div className="text-center">
-              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 24, fontFamily: CINZEL }}>מי הגיבור שלך?</h2>
-              <p className="mt-2 text-xs" style={{ color: "#C9A84C", opacity: 0.45 }}>בחר את הדמות שמייצגת אותך</p>
+              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 24, fontFamily: CINZEL }}>Who is your hero?</h2>
+              <p className="mt-2 text-xs" style={{ color: "#C9A84C", opacity: 0.45 }}>Choose the character that represents you</p>
             </div>
             <div className="flex gap-4">
-              {([{ value: "male", label: "גבר", emoji: "👨" }, { value: "female", label: "אישה", emoji: "👩" }] as const).map(g => (
+              {([{ value: "male", label: "Male", emoji: "👨" }, { value: "female", label: "Female", emoji: "👩" }] as const).map(g => (
                 <button key={g.value} onClick={() => setGender(g.value)}
                   className="flex-1 flex flex-col items-center gap-3 py-8 rounded-2xl transition-all active:scale-95"
-                  style={{ backgroundColor: gender === g.value ? "rgba(201,168,76,0.1)" : "#111830", border: `2px solid ${gender === g.value ? "#C9A84C" : "#1e2d5e"}`, transform: gender === g.value ? "scale(1.04)" : "scale(1)", transition: "all 0.2s ease" }}>
+                  style={{ backgroundColor: gender === g.value ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${gender === g.value ? "rgba(201,168,76,0.5)" : "rgba(201,168,76,0.12)"}`, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", transform: gender === g.value ? "scale(1.04)" : "scale(1)", transition: "all 0.2s ease" }}>
                   <span style={{ fontSize: 52 }}>{g.emoji}</span>
                   <span style={{ color: "#C9A84C", fontSize: 16, fontWeight: 800 }}>{g.label}</span>
                 </button>
@@ -693,40 +548,40 @@ function OnboardingScreen({ user, onComplete }: { user: User; onComplete: () => 
             </div>
             <button onClick={goNext} disabled={!gender}
               className="w-full rounded-xl font-black tracking-widest uppercase transition-all active:scale-95"
-              style={{ background: gender ? "linear-gradient(135deg, #8B6914, #C9A84C)" : "#1a1a3e", color: "#0D0D1F", padding: "16px", opacity: gender ? 1 : 0.45, fontSize: 14 }}>
-              המשך →
+              style={{ background: gender ? "linear-gradient(135deg, #C9A84C, #A8872E)" : "#1a1a3e", color: "#080810", padding: "16px", opacity: gender ? 1 : 0.45, fontSize: 14, fontFamily: CINZEL, letterSpacing: "0.1em", boxShadow: gender ? "0 4px 20px rgba(201,168,76,0.3)" : "none" }}>
+              Continue →
             </button>
           </>
         )}
         {step === 2 && (
           <>
             <div className="text-center">
-              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 24, fontFamily: CINZEL }}>מה שם הגיבור שלך?</h2>
+              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 24, fontFamily: CINZEL }}>What is your hero&apos;s name?</h2>
             </div>
-            <input type="text" placeholder="שם הגיבור..." value={heroName} autoFocus
+            <input type="text" placeholder="Hero name..." value={heroName} autoFocus
               onChange={e => setHeroName(e.target.value)}
               onKeyDown={e => e.key === "Enter" && heroName.trim() && goNext()}
               className="w-full rounded-xl text-center text-xl font-bold outline-none"
-              style={{ backgroundColor: "#111830", border: "2px solid rgba(201,168,76,0.4)", color: "#C9A84C", padding: "16px 18px", direction: "rtl" }}
+              style={{ backgroundColor: "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(201,168,76,0.2)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", color: "#C9A84C", padding: "16px 18px", direction: "ltr" }}
               onFocus={e => (e.target.style.borderColor = "#C9A84C")}
               onBlur={e => (e.target.style.borderColor = "rgba(201,168,76,0.4)")} />
             <button onClick={goNext} disabled={!heroName.trim()}
               className="w-full rounded-xl font-black tracking-widest uppercase transition-all active:scale-95"
-              style={{ background: heroName.trim() ? "linear-gradient(135deg, #8B6914, #C9A84C)" : "#1a1a3e", color: "#0D0D1F", padding: "16px", opacity: heroName.trim() ? 1 : 0.45, fontSize: 14 }}>
-              המשך →
+              style={{ background: heroName.trim() ? "linear-gradient(135deg, #C9A84C, #A8872E)" : "#1a1a3e", color: "#080810", padding: "16px", opacity: heroName.trim() ? 1 : 0.45, fontSize: 14, fontFamily: CINZEL, letterSpacing: "0.1em", boxShadow: heroName.trim() ? "0 4px 20px rgba(201,168,76,0.3)" : "none" }}>
+              Continue →
             </button>
           </>
         )}
         {step === 3 && (
           <>
             <div className="text-center">
-              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 22, fontFamily: CINZEL }}>איזה הרגל אתה רוצה לבנות?</h2>
+              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 22, fontFamily: CINZEL }}>Which habit do you want to build?</h2>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {HABITS.map(h => (
                 <button key={h.value} onClick={() => setHabit(h.value)}
                   className="flex flex-col items-center gap-2 py-5 rounded-2xl transition-all active:scale-95"
-                  style={{ backgroundColor: habit === h.value ? "rgba(201,168,76,0.1)" : "#111830", border: `2px solid ${habit === h.value ? "#C9A84C" : "#1e2d5e"}`, transform: habit === h.value ? "scale(1.03)" : "scale(1)", transition: "all 0.2s ease" }}>
+                  style={{ backgroundColor: habit === h.value ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${habit === h.value ? "rgba(201,168,76,0.5)" : "rgba(201,168,76,0.12)"}`, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", transform: habit === h.value ? "scale(1.03)" : "scale(1)", transition: "all 0.2s ease" }}>
                   <span style={{ fontSize: 34 }}>{h.emoji}</span>
                   <span style={{ color: "#C9A84C", fontSize: 13, fontWeight: 700 }}>{h.label}</span>
                 </button>
@@ -734,30 +589,30 @@ function OnboardingScreen({ user, onComplete }: { user: User; onComplete: () => 
             </div>
             <button onClick={goNext} disabled={!habit}
               className="w-full rounded-xl font-black tracking-widest uppercase transition-all active:scale-95"
-              style={{ background: habit ? "linear-gradient(135deg, #8B6914, #C9A84C)" : "#1a1a3e", color: "#0D0D1F", padding: "16px", opacity: habit ? 1 : 0.45, fontSize: 14 }}>
-              המשך →
+              style={{ background: habit ? "linear-gradient(135deg, #C9A84C, #A8872E)" : "#1a1a3e", color: "#080810", padding: "16px", opacity: habit ? 1 : 0.45, fontSize: 14, fontFamily: CINZEL, letterSpacing: "0.1em", boxShadow: habit ? "0 4px 20px rgba(201,168,76,0.3)" : "none" }}>
+              Continue →
             </button>
           </>
         )}
         {step === 4 && (
           <>
             <div className="text-center">
-              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 22, fontFamily: CINZEL }}>כמה פעמים בשבוע?</h2>
-              <p className="mt-2 text-xs" style={{ color: "#C9A84C", opacity: 0.45 }}>בחר את הקצב שמתאים לך</p>
+              <h2 className="font-black" style={{ color: "#C9A84C", fontSize: 22, fontFamily: CINZEL }}>How many times per week?</h2>
+              <p className="mt-2 text-xs" style={{ color: "#C9A84C", opacity: 0.45 }}>Choose the pace that works for you</p>
             </div>
             <div className="flex gap-3">
               {[3, 5, 7].map(n => (
                 <button key={n} onClick={() => setFrequency(n)}
                   className="flex-1 py-7 rounded-2xl font-black text-3xl transition-all active:scale-95"
-                  style={{ backgroundColor: frequency === n ? "rgba(201,168,76,0.1)" : "#111830", border: `2px solid ${frequency === n ? "#C9A84C" : "#1e2d5e"}`, color: "#C9A84C", transform: frequency === n ? "scale(1.06)" : "scale(1)", transition: "all 0.2s ease" }}>
+                  style={{ backgroundColor: frequency === n ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1px solid ${frequency === n ? "rgba(201,168,76,0.5)" : "rgba(201,168,76,0.12)"}`, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", color: "#C9A84C", transform: frequency === n ? "scale(1.06)" : "scale(1)", transition: "all 0.2s ease" }}>
                   {n}
                 </button>
               ))}
             </div>
             <button onClick={handleFinish} disabled={!frequency || saving}
               className="w-full rounded-xl font-black tracking-wide transition-all active:scale-95"
-              style={{ background: frequency ? "linear-gradient(135deg, #8B6914, #C9A84C)" : "#1a1a3e", color: "#0D0D1F", padding: "18px", opacity: (frequency && !saving) ? 1 : 0.45, fontSize: 16 }}>
-              {saving ? "..." : "בואו נתחיל! 🚀"}
+              style={{ background: frequency ? "linear-gradient(135deg, #C9A84C, #A8872E)" : "#1a1a3e", color: "#080810", padding: "18px", opacity: (frequency && !saving) ? 1 : 0.45, fontSize: 16, fontFamily: CINZEL, letterSpacing: "0.1em", boxShadow: frequency ? "0 4px 20px rgba(201,168,76,0.3)" : "none" }}>
+              {saving ? "..." : "Let's go! 🚀"}
             </button>
           </>
         )}
@@ -775,7 +630,12 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const [lang, setLang] = useState<Lang>("he");
   const [themeKey, setThemeKey] = useState<ThemeKey>("dark");
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [completedToday, setCompletedToday] = useState(false);
+  const [completedToday, setCompletedToday] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const today = new Date().toISOString().split("T")[0];
+    return localStorage.getItem("completed_" + today) === "true";
+  });
+  const [weeklyCount, setWeeklyCount] = useState(0);
   const [heroStatus, setHeroStatus] = useState<"active" | "sleeping" | "decayed">("active");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -818,6 +678,11 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
       const { from, to } = todayRange();
       const { data: logs } = await supabase.from("habit_logs").select("id").eq("user_id", uid).gte("completed_at", from).lte("completed_at", to);
       setCompletedToday((logs ?? []).length > 0);
+
+      // Count completions this week (Monday to now)
+      const week = weekRange();
+      const { data: weekLogs } = await supabase.from("habit_logs").select("id").eq("user_id", uid).gte("completed_at", week.from).lte("completed_at", week.to);
+      setWeeklyCount((weekLogs ?? []).length);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -832,10 +697,6 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
     setActiveTab(tab);
   }
 
-  function changeLang(l: Lang) {
-    setLang(l);
-    localStorage.setItem("hr-lang", l);
-  }
   function changeTheme(k: ThemeKey) {
     setThemeKey(k);
     localStorage.setItem("hr-theme", k);
@@ -886,9 +747,10 @@ function MainApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
       `}</style>
 
       <div key={activeTab} style={{ animation: "tabSlideIn 0.3s ease-out both", paddingBottom: 88 }}>
-        {activeTab === "home"     && <HomeTab     user={user} profile={profile} setProfile={setProfile} completedToday={completedToday} setCompletedToday={setCompletedToday} tc={tc} t={t} lang={lang} themeKey={themeKey} heroStatus={heroStatus} setHeroStatus={setHeroStatus} />}
+        {activeTab === "home"     && <HomeTab     user={user} profile={profile} setProfile={setProfile} completedToday={completedToday} setCompletedToday={setCompletedToday} weeklyCount={weeklyCount} setWeeklyCount={setWeeklyCount} tc={tc} t={t} lang={lang} themeKey={themeKey} heroStatus={heroStatus} setHeroStatus={setHeroStatus} />}
         {activeTab === "profile"  && <ProfileTab  user={user} profile={profile} setProfile={setProfile} tc={tc} t={t} lang={lang} themeKey={themeKey} />}
-        {activeTab === "settings" && <SettingsTab user={user} onSignOut={onSignOut} tc={tc} t={t} lang={lang} themeKey={themeKey} onChangeLang={changeLang} onChangeTheme={changeTheme} />}
+        {activeTab === "shop"     && <ShopTab     profile={profile} setProfile={setProfile} user={user} tc={tc} />}
+        {activeTab === "settings" && <SettingsTab user={user} onSignOut={onSignOut} tc={tc} t={t} themeKey={themeKey} onChangeTheme={changeTheme} />}
       </div>
 
       <BottomNav activeTab={activeTab} setActiveTab={switchTab} tc={tc} t={t} />
@@ -912,6 +774,9 @@ function NavIcon({ id, active, gold, muted }: { id: string; active: boolean; gol
       <path d="M4 20C4 16.686 7.582 14 12 14C16.418 14 20 16.686 20 20H4Z"/>
     </svg>
   );
+  if (id === "shop") return (
+    <span style={{ fontSize: 20, lineHeight: 1 }}>🛒</span>
+  );
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill={c}>
       <circle cx="12" cy="12" r="3"/>
@@ -930,15 +795,18 @@ function BottomNav({
   const tabs: { id: string; label: string }[] = [
     { id: "home",     label: t.home     },
     { id: "profile",  label: t.profile  },
+    { id: "shop",     label: t.shop     },
     { id: "settings", label: t.settings },
   ];
 
   return (
     <nav style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
-      backgroundColor: tc.navBg,
-      borderTop: `1px solid ${tc.navBorder}`,
-      backdropFilter: "blur(24px)",
+      background: "rgba(8,8,16,0.9)",
+      borderTop: "1px solid rgba(201,168,76,0.1)",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      boxShadow: "0 -4px 24px rgba(0,0,0,0.4)",
       display: "flex", justifyContent: "space-around",
       padding: "10px 0 18px",
     }}>
@@ -975,10 +843,11 @@ function BottomNav({
 // Home Tab
 // ─────────────────────────────────────────────────────────────────────────────
 function HomeTab({
-  user, profile, setProfile, completedToday, setCompletedToday, tc, t, lang, themeKey, heroStatus, setHeroStatus,
+  user, profile, setProfile, completedToday, setCompletedToday, weeklyCount, setWeeklyCount, tc, t, lang, themeKey, heroStatus, setHeroStatus,
 }: {
   user: User; profile: Profile; setProfile: (p: Profile) => void;
   completedToday: boolean; setCompletedToday: (v: boolean) => void;
+  weeklyCount: number; setWeeklyCount: (n: number) => void;
   tc: TC; t: TT; lang: Lang; themeKey: ThemeKey;
   heroStatus: "active" | "sleeping" | "decayed"; setHeroStatus: (s: "active" | "sleeping" | "decayed") => void;
 }) {
@@ -991,59 +860,79 @@ function HomeTab({
   const [avatarBounce, setAvatarBounce]   = useState(false);
   const [showAvatarBurst, setShowAvatarBurst] = useState(false);
   const [showDoneText, setShowDoneText]   = useState(false);
+  const [coinAnim, setCoinAnim]           = useState<{ from: number; to: number } | null>(null);
 
   function triggerLevelUp() {
     setJustLeveled(true);
     setTimeout(() => setJustLeveled(false), 3500);
   }
 
+  function markCompleted() {
+    setCompletedToday(true);
+    const today = new Date().toISOString().split("T")[0];
+    localStorage.setItem("completed_" + today, "true");
+  }
+
   async function handleCheck() {
     if (completedToday || checking || !profile) return;
     setChecking(true);
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    const uid = currentUser?.id ?? user.id;
 
-    const newXp          = profile.total_xp + XP_PER_COMPLETION;
-    const newLevel       = Math.floor(newXp / XP_PER_LEVEL) + 1;
-    const newStreak      = profile.current_streak + 1;
-    const newAvatarStage = computeAvatarStage(newStreak);
-    const newLongest     = Math.max(profile.longest_streak, newStreak);
-
-    const { error: logErr } = await supabase.from("habit_logs").insert({
-      user_id: uid, completed_at: new Date().toISOString(), habit_type: profile.habit_type,
+    const { data, error } = await supabase.rpc('complete_habit', {
+      p_user_id: user.id,
+      p_habit_type: profile.habit_type,
     });
-    if (logErr) { console.error("log error:", logErr.message); setChecking(false); return; }
 
-    const { error: updErr } = await supabase.from("profiles").update({
-      total_xp: newXp, level: newLevel, avatar_stage: newAvatarStage,
-      current_streak: newStreak, longest_streak: newLongest,
-    }).eq("id", uid);
-    if (updErr) { console.error("update error:", updErr.message); setChecking(false); return; }
+    if (error || !data) {
+      console.error('complete_habit failed:', error);
+      markCompleted();
+      setChecking(false);
+      return;
+    }
 
-    const newProfile = { ...profile, total_xp: newXp, level: newLevel, avatar_stage: newAvatarStage, current_streak: newStreak, longest_streak: newLongest };
+    if (!data.success) {
+      // Already completed today — lock in completed state
+      markCompleted();
+      setHeroStatus("active");
+      setChecking(false);
+      return;
+    }
 
-    setCompletedToday(true);
+    const oldCoins = profile.coins ?? 0;
+    const newProfile = {
+      ...profile,
+      total_xp: data.xp,
+      level: data.level,
+      current_streak: data.streak,
+      avatar_stage: data.stage,
+      coins: data.coins,
+    };
+    setProfile(newProfile);
+    if (data.coins > oldCoins) {
+      setCoinAnim({ from: oldCoins, to: data.coins });
+      setTimeout(() => setCoinAnim(null), 1500);
+    }
+    markCompleted();
+    setWeeklyCount(weeklyCount + 1);
     setHeroStatus("active");
     setShowBurst(true);
     setTimeout(() => setShowBurst(false), 1000);
-
     setAvatarBounce(true);
     setShowAvatarBurst(true);
     setTimeout(() => setAvatarBounce(false), 300);
     setTimeout(() => setShowAvatarBurst(false), 1000);
-
     setShowDoneText(true);
     setTimeout(() => setShowDoneText(false), 1500);
-
-    if (newLevel > profile.level) triggerLevelUp();
-
+    if (data.level > profile.level) triggerLevelUp();
     setAvatarExiting(true);
     setTimeout(() => {
-      setProfile(newProfile);
+      setProfile({ ...newProfile });
       setAvatarExiting(false);
       setAvatarEntering(true);
       setAvatarGlowBurst(true);
-      setTimeout(() => { setAvatarEntering(false); setAvatarGlowBurst(false); }, 700);
+      setTimeout(() => {
+        setAvatarEntering(false);
+        setAvatarGlowBurst(false);
+      }, 700);
     }, 350);
 
     setChecking(false);
@@ -1077,7 +966,28 @@ const xpPct    = xpPercent(profile.total_xp);
         @keyframes avatarFloat  { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);} }
         @keyframes avatarParticle { 0%{transform:translate(0,0) scale(1);opacity:1;} 100%{transform:translate(var(--atx),var(--aty)) scale(0);opacity:0;} }
         @keyframes doneTextAnim { 0%{opacity:0;transform:translate(-50%,-50%) scale(.5);} 25%{opacity:1;transform:translate(-50%,-50%) scale(1.1);} 65%{opacity:1;transform:translate(-50%,-50%) scale(1);} 100%{opacity:0;transform:translate(-50%,-50%) scale(.95);} }
+        @keyframes luxuryFadeIn { from{opacity:0;transform:translateY(28px);} to{opacity:1;transform:translateY(0);} }
       `}</style>
+
+      {/* Coins HUD */}
+      <div style={{
+        position: "absolute",
+        top: 16,
+        right: 16,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        background: "rgba(0,0,0,0.4)",
+        border: "1px solid rgba(201,168,76,0.3)",
+        borderRadius: 20,
+        padding: "6px 14px",
+        zIndex: 10,
+      }}>
+        <span style={{ fontSize: 16 }}>💰</span>
+        <span style={{ color: "#C9A84C", fontWeight: 700, fontSize: 16 }}>
+          {profile.coins}
+        </span>
+      </div>
 
       {/* Background particles */}
       {BG_PARTICLES.map(p => (
@@ -1089,7 +999,7 @@ const xpPct    = xpPercent(profile.total_xp);
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "radial-gradient(circle at center, rgba(201,168,76,0.22) 0%, rgba(13,13,31,0.96) 65%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, animation: "levelIn 0.45s ease-out forwards" }}>
           <div style={{ fontSize: 88, animation: "crownBounce 1.1s ease-in-out infinite" }}>👑</div>
           <div style={{ color: tc.gold, fontSize: 38, fontWeight: 900, letterSpacing: "0.22em", textShadow: `0 0 40px ${tc.gold}`, fontFamily: CINZEL }}>LEVEL UP!</div>
-          <div style={{ color: "#fff", fontSize: 22, fontWeight: 700, opacity: 0.85 }}>Level {profile.level}</div>
+          <div style={{ color: tc.text, fontSize: 22, fontWeight: 700, opacity: 0.85 }}>Level {profile.level}</div>
           {Array.from({ length: 16 }, (_, i) => {
             const angle = (i / 16) * Math.PI * 2;
             const dist  = 130 + (i % 3) * 55;
@@ -1114,12 +1024,12 @@ const xpPct    = xpPercent(profile.total_xp);
         {/* Logo */}
         <div className="w-full flex flex-col items-center gap-1 mt-2" style={{ animation: "fadeSlideUp 0.5s 0ms ease-out both" }}>
           <h1 className="text-4xl font-black tracking-widest" style={{ color: tc.goldLight, fontFamily: CINZEL }}>HabitRise</h1>
-          <span className="text-xs font-medium" style={{ color: tc.goldLight, opacity: 0.45 }}>{user.email}</span>
+          <span className="text-xs font-medium" style={{ color: tc.goldLight, opacity: 0.5 }}>{user.email}</span>
         </div>
 
         {/* Hero Card */}
         <div style={{ animation: "fadeSlideUp 0.5s 100ms ease-out both" }}>
-          <div style={{ border: `1px solid ${tc.border}`, background: `linear-gradient(180deg, ${tc.card}ee 0%, ${tc.bg}00 100%)`, borderRadius: 28, padding: "32px 32px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, boxShadow: `0 0 40px ${tc.gold}14, inset 0 1px 0 ${tc.border}`, backdropFilter: "blur(12px)" }}>
+          <div style={{ border: "1px solid rgba(201,168,76,0.15)", background: "radial-gradient(ellipse at center, rgba(201,168,76,0.06) 0%, rgba(8,8,16,0) 70%)", borderRadius: 28, padding: "32px 32px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 0 60px rgba(201,168,76,0.08)", backdropFilter: "blur(12px)" }}>
             <div style={{ position: "relative", width: 220, height: 220 }}>
               <div style={{ position: "absolute", inset: -32, borderRadius: "50%", background: `radial-gradient(circle, ${tc.gold}38 0%, transparent 70%)`, animation: "glowPulse 3s ease-in-out infinite", pointerEvents: "none" }} />
               <div style={{ position: "absolute", inset: -4, borderRadius: "50%", boxShadow: `0 0 35px 12px ${tc.gold}40, 0 0 80px 20px ${tc.gold}1a`, animation: "glowPulse 3s ease-in-out infinite", pointerEvents: "none" }} />
@@ -1146,10 +1056,10 @@ const xpPct    = xpPercent(profile.total_xp);
                 </div>
               )}
             </div>
-            <div className="font-black tracking-wide text-center" style={{ color: tc.goldLight, fontSize: 24, textShadow: `0 0 20px ${tc.gold}66`, fontFamily: CINZEL }}>
+            <div className="tracking-wide text-center" style={{ color: tc.goldLight, fontSize: 24, fontWeight: 700, textShadow: `0 0 20px ${tc.gold}66`, fontFamily: CINZEL }}>
               {profile.username || "Hero"}
             </div>
-            <span className="text-xs font-bold tracking-[0.3em] uppercase" style={{ color: tc.goldLight, opacity: 0.45 }}>
+            <span className="text-xs uppercase" style={{ fontFamily: INTER, fontWeight: 300, letterSpacing: "0.2em", color: tc.goldLight, opacity: 0.6 }}>
               {t.stage} {avatarStage} · {t.level} {profile.level}
             </span>
           </div>
@@ -1159,10 +1069,10 @@ const xpPct    = xpPercent(profile.total_xp);
         {heroStatus === "sleeping" && !completedToday && (
           <div style={{ width: "100%", maxWidth: 340, padding: "14px 18px", borderRadius: 16, backgroundColor: "rgba(100,120,200,0.1)", border: "1px solid rgba(100,120,200,0.25)", textAlign: "center", animation: "fadeSlideUp 0.5s 150ms ease-out both" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#7B8FD4", marginBottom: 4 }}>
-              {lang === "he" ? "😴 הגיבור שלך ישן..." : "😴 Your hero is sleeping..."}
+              😴 Your hero is sleeping...
             </div>
             <div style={{ fontSize: 12, color: tc.textSub, lineHeight: 1.4 }}>
-              {lang === "he" ? "סמן את ההרגל היום כדי להעיר אותו ולשמור על הסטריק!" : "Complete your habit today to wake them up and save your streak!"}
+              Complete your habit today to wake them up and save your streak!
             </div>
           </div>
         )}
@@ -1170,62 +1080,343 @@ const xpPct    = xpPercent(profile.total_xp);
         {/* Daily Quote — above habit card */}
         <DailyQuote lang={lang} tc={tc} />
 
-        {/* Habit Card — right after hero */}
-        <div style={{ width: "100%", animation: "fadeSlideUp 0.5s 200ms ease-out both" }}>
-          <div onClick={!completedToday && !checking ? handleCheck : undefined}
-            className="btn-gold"
-            style={{ position: "relative", overflow: "hidden", backgroundColor: completedToday ? `${tc.gold}12` : tc.card, border: `1px solid ${completedToday ? tc.gold : "rgba(201,168,76,0.1)"}`, borderRadius: 16, padding: "22px 24px", display: "flex", alignItems: "center", gap: 18, cursor: completedToday ? "default" : "pointer", opacity: checking ? 0.6 : 1, transition: "border-color 0.3s, background-color 0.3s", boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
-            {completedToday && (
-              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.18) 50%, transparent 100%)", backgroundSize: "300% auto", animation: "shimmer 2.8s linear infinite" }} />
-            )}
-            <span style={{ fontSize: 40, flexShrink: 0, zIndex: 1 }}>{habitEmoji}</span>
-            <div className="flex-1" style={{ zIndex: 1 }}>
-              <div className="font-black" style={{ color: tc.goldLight, fontSize: 17, opacity: completedToday ? 0.65 : 1 }}>{profile.habit_type}</div>
-              <div className="text-xs font-semibold mt-1" style={{ color: tc.gold, opacity: 0.55 }}>
-                {completedToday ? `✓ ${lang === "he" ? "כבר עשית היום" : "Done for today"}` : `+${XP_PER_COMPLETION} XP`}
-              </div>
-            </div>
-            <div style={{ position: "relative", flexShrink: 0, zIndex: 1 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", border: `2px solid #C9A84C`, backgroundColor: completedToday ? "#C9A84C" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 0.35s ease" }}>
-                {completedToday && (
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                    <path d="M4 10L8.5 14.5L16 6" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="30" style={{ animation: "checkDraw 0.4s ease-out forwards" }} />
-                  </svg>
-                )}
-              </div>
-              {showBurst && BURST_DIRS.map((b, i) => (
-                <div key={i} style={{ position: "absolute", top: "50%", left: "50%", width: 7, height: 7, borderRadius: "50%", backgroundColor: tc.gold, ["--tx" as string]: `${b.tx}px`, ["--ty" as string]: `${b.ty}px`, animation: `burst 0.75s ${i*0.04}s ease-out forwards` }} />
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Habit Card — Swipe to Complete */}
+        <SwipeHabitCard
+          completedToday={completedToday}
+          checking={checking}
+          handleCheck={handleCheck}
+          habitEmoji={habitEmoji}
+          habitType={profile.habit_type}
+          tc={tc}
+          showBurst={showBurst}
+        />
 
         {/* Streak */}
         <div className="flex flex-col items-center gap-1" style={{ animation: "fadeSlideUp 0.5s 300ms ease-out both" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="text-8xl font-black leading-none" style={{ color: tc.goldLight, fontFamily: CINZEL }}>{profile.current_streak}</span>
+            <span className="text-8xl leading-none" style={{ color: tc.goldLight, fontFamily: CINZEL, fontWeight: 900 }}>{profile.current_streak}</span>
             <span style={{ fontSize: 48 }}>🔥</span>
           </div>
-          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 500 }}>
-            {lang === "he" ? "רצף נוכחי" : "Current streak"}
+          <span style={{ color: tc.textSub, fontSize: 13, fontWeight: 500 }}>
+            Current streak
+          </span>
+          <span style={{ color: tc.gold, fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+            {weeklyCount} / {profile.habit_frequency || 7} this week
           </span>
           <div className="mt-1 w-16 h-px rounded-full" style={{ backgroundColor: tc.gold, opacity: 0.3 }} />
         </div>
 
         {/* XP Bar */}
         <div style={{ width: 320, animation: "fadeSlideUp 0.5s 400ms ease-out both" }} className="flex flex-col gap-2">
-          <div className="flex justify-between text-xs font-semibold" style={{ color: tc.gold, opacity: 0.6 }}>
+          <div className="flex justify-between text-xs font-semibold" style={{ color: tc.gold }}>
             <span>{xpInLvl} XP</span>
             <span>{xpToNext} {t.xpToNext} {profile.level + 1}</span>
           </div>
-          <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: tc.xpTrack }}>
-            <div className="h-full rounded-full" style={{ width: `${xpPct}%`, backgroundColor: tc.gold, transition: "width 1.2s ease-out" }} />
+          <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: tc.xpTrack, boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5), 0 0 12px rgba(201,168,76,0.2)" }}>
+            <div className="h-full rounded-full" style={{ width: `${xpPct}%`, backgroundColor: tc.gold, transition: `width 1.2s ${LUXURY_EASE}` }} />
           </div>
         </div>
 
+        {/* Coin animation after completion */}
+        {coinAnim && (
+          <CoinCounter from={coinAnim.from} to={coinAnim.to} tc={tc} />
+        )}
 
       </div>
     </main>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coin Counter Animation
+// ─────────────────────────────────────────────────────────────────────────────
+function CoinCounter({ from, to, tc }: { from: number; to: number; tc: TC }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{ display: "flex", alignItems: "center", gap: 6 }}
+    >
+      <span style={{ fontSize: 18 }}>💰</span>
+      <span style={{ fontSize: 18, fontWeight: 800, color: tc.gold, fontFamily: CINZEL }}>
+        +{to - from} coins
+      </span>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shop Tab
+// ─────────────────────────────────────────────────────────────────────────────
+const SHOP_ITEMS = [
+  { id: "rescue", emoji: "🛡️", name: "Streak Rescue", desc: "Save your streak from breaking", price: 50, btnLabel: "Rescue", action: "rpc" as const },
+  { id: "xp_boost", emoji: "⚡", name: "XP Boost", desc: "Double XP for next completion", price: 30, btnLabel: "Buy", action: "local" as const },
+  { id: "outfit", emoji: "👑", name: "Hero Outfit", desc: "Coming Soon", price: 100, btnLabel: "Soon", action: "disabled" as const },
+];
+
+function ShopTab({
+  profile, setProfile, user, tc,
+}: {
+  profile: Profile; setProfile: (p: Profile) => void; user: User; tc: TC;
+}) {
+  const [buying, setBuying] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleBuy(item: typeof SHOP_ITEMS[number]) {
+    if (buying) return;
+    const coins = profile.coins ?? 0;
+    if (coins < item.price) return;
+
+    setBuying(item.id);
+    setMessage(null);
+
+    try {
+      if (item.action === "rpc") {
+        const { data, error } = await supabase.rpc("rescue_streak", { p_user_id: user.id });
+        if (error || !data?.success) { console.error("rescue_streak failed:", error); setMessage("Failed — try again"); setBuying(null); return; }
+        setProfile({ ...profile, coins: data.coins_remaining ?? (coins - item.price), current_streak: data.streak ?? profile.current_streak });
+        setMessage("Streak Saved! 🎉");
+      } else if (item.action === "local") {
+        const { data, error } = await supabase.rpc("purchase_item", { p_user_id: user.id, p_item: "xp_boost", p_cost: 30 });
+        if (error || !data?.success) { console.error("XP Boost purchase failed:", error); setMessage("Failed — try again"); setBuying(null); return; }
+        localStorage.setItem("xp_boost", "true");
+        setProfile({ ...profile, coins: data.coins_remaining });
+        setMessage("XP Boost activated! ⚡");
+      }
+    } catch (e) {
+      console.error("Shop purchase error:", e);
+      setMessage("Something went wrong");
+    } finally {
+      setBuying(null);
+    }
+  }
+
+  const coins = profile.coins ?? 0;
+
+  return (
+    <main style={{ backgroundColor: tc.bg, minHeight: "100vh", padding: "48px 20px 32px" }}>
+      <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }`}</style>
+
+      {/* Title */}
+      <h1 style={{ fontFamily: CINZEL, color: tc.gold, fontSize: 32, fontWeight: 700, textAlign: "center", marginBottom: 28, letterSpacing: "0.1em", textShadow: `0 0 30px rgba(201,168,76,0.4)`, animation: "fadeIn 0.4s ease-out both" }}>
+        Shop 🛒
+      </h1>
+
+      {/* Coins balance */}
+      <div style={{ textAlign: "center", marginBottom: 24, padding: "18px", borderRadius: 16, ...GLASS, animation: "fadeIn 0.4s 0.05s ease-out both" }}>
+        <span style={{ fontSize: 32, fontWeight: 800, color: tc.gold, fontFamily: CINZEL }}>💰 {coins} coins</span>
+      </div>
+
+      {/* How to earn coins */}
+      <div style={{ padding: "12px 16px", borderRadius: 12, border: `1px solid ${tc.border}`, marginBottom: 16, animation: "fadeIn 0.4s 0.08s ease-out both" }}>
+        <span style={{ fontSize: 13, color: tc.text, lineHeight: 1.6 }}>💡 Earn coins by completing your daily habit — <span style={{ color: tc.gold, fontWeight: 700 }}>+10 coins per completion</span></span>
+      </div>
+
+      {/* Success/error message */}
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{ textAlign: "center", padding: "12px", borderRadius: 12, backgroundColor: message.includes("Failed") || message.includes("wrong") ? "rgba(255,80,80,0.15)" : `${tc.gold}18`, marginBottom: 16 }}
+        >
+          <span style={{ color: message.includes("Failed") || message.includes("wrong") ? "#ff6b6b" : tc.gold, fontWeight: 700, fontSize: 15 }}>{message}</span>
+        </motion.div>
+      )}
+
+      {/* Items */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {SHOP_ITEMS.map((item, idx) => {
+          const canAfford = coins >= item.price;
+          const isDisabled = item.action === "disabled" || !canAfford || buying === item.id;
+
+          return (
+            <div key={item.id} style={{ ...GLASS, borderRadius: 16, padding: "18px 16px", display: "flex", alignItems: "center", gap: 14, animation: `fadeIn 0.4s ${0.1 + idx * 0.08}s ease-out both` }}>
+              <span style={{ fontSize: 36, flexShrink: 0 }}>{item.emoji}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: tc.goldLight, fontWeight: 700, fontSize: 15 }}>{item.name}</div>
+                <div style={{ color: tc.textSub, fontSize: 12, marginTop: 2 }}>{item.desc}</div>
+                <div style={{ display: "inline-block", marginTop: 4, padding: "2px 10px", borderRadius: 8, background: "linear-gradient(135deg, #C9A84C, #A8872E)", color: "#080810", fontSize: 12, fontWeight: 800 }}>💰 {item.price}</div>
+              </div>
+              <button
+                onClick={() => handleBuy(item)}
+                disabled={isDisabled}
+                className="btn-gold"
+                style={{
+                  padding: "10px 18px", borderRadius: 12, border: "none", fontWeight: 800, fontSize: 13, fontFamily: CINZEL, cursor: isDisabled ? "default" : "pointer",
+                  background: isDisabled ? tc.card : `linear-gradient(135deg, #8B6914, ${tc.gold})`,
+                  color: isDisabled ? tc.textSub : "#0D0D1F",
+                  opacity: isDisabled ? 0.5 : 1,
+                  minWidth: 70, textAlign: "center",
+                }}
+              >
+                {buying === item.id ? "..." : item.btnLabel}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </main>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Swipe to Complete – Habit Card
+// ─────────────────────────────────────────────────────────────────────────────
+const SWIPE_KNOB_SIZE = 52;
+const SWIPE_PAD = 6; // padding inside track on each side
+
+function SwipeHabitCard({
+  completedToday, checking, handleCheck, habitEmoji, habitType, tc, showBurst,
+}: {
+  completedToday: boolean; checking: boolean; handleCheck: () => Promise<void>;
+  habitEmoji: string; habitType: string; tc: TC; showBurst: boolean;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const [swiped, setSwiped] = useState(false);
+
+  // Derive swipeMax dynamically from track width
+  const [swipeMax, setSwipeMax] = useState(260);
+  useEffect(() => {
+    if (!trackRef.current) return;
+    const update = () => {
+      const w = trackRef.current!.offsetWidth;
+      setSwipeMax(w - SWIPE_KNOB_SIZE - SWIPE_PAD * 2);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(trackRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const fillWidth = useTransform(x, [0, swipeMax], [0, swipeMax + SWIPE_KNOB_SIZE + SWIPE_PAD]);
+  const knobOpacity = useTransform(x, [0, swipeMax * 0.5, swipeMax], [1, 0.85, 0.7]);
+  const arrowOpacity = useTransform(x, [0, swipeMax * 0.5], [1, 0]);
+
+  async function onDragEnd(_: unknown, info: { offset: { x: number } }) {
+    if (completedToday || checking || swiped) return;
+    if (info.offset.x >= swipeMax * 0.9) {
+      setSwiped(true);
+      await handleCheck();
+    }
+  }
+
+  const isComplete = completedToday || swiped;
+
+  return (
+    <div style={{ width: "100%", animation: "fadeSlideUp 0.5s 200ms ease-out both" }}>
+      {/* Habit info row */}
+      <div style={{
+        background: tc.card, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        borderRadius: "16px 16px 0 0",
+        borderTop: `1px solid ${isComplete ? tc.gold : "rgba(201,168,76,0.12)"}`,
+        borderRight: `1px solid ${isComplete ? tc.gold : "rgba(201,168,76,0.12)"}`,
+        borderLeft: `1px solid ${isComplete ? tc.gold : "rgba(201,168,76,0.12)"}`,
+        borderBottom: "none",
+        padding: "18px 24px", display: "flex", alignItems: "center", gap: 16,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        transition: `border-color 0.4s ${LUXURY_EASE}`,
+      }}>
+        <span style={{ fontSize: 36, flexShrink: 0 }}>{habitEmoji}</span>
+        <div className="flex-1">
+          <div className="font-black" style={{ color: tc.goldLight, fontSize: 17 }}>{habitType}</div>
+          <div className="text-xs font-semibold mt-1" style={{ color: tc.gold }}>
+            {isComplete ? `✓ Done for today` : `+${XP_PER_COMPLETION} XP`}
+          </div>
+        </div>
+        {/* Burst particles on complete */}
+        <div style={{ position: "relative", flexShrink: 0, width: 32, height: 32 }}>
+          {showBurst && BURST_DIRS.map((b, i) => (
+            <div key={i} style={{ position: "absolute", top: "50%", left: "50%", width: 7, height: 7, borderRadius: "50%", backgroundColor: tc.gold, ["--tx" as string]: `${b.tx}px`, ["--ty" as string]: `${b.ty}px`, animation: `burst 0.75s ${i*0.04}s ease-out forwards` }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Slider track */}
+      <div ref={trackRef} style={{
+        position: "relative",
+        width: "100%", height: 64,
+        backgroundColor: isComplete ? tc.gold : "rgba(20,20,40,0.8)",
+        borderRadius: "0 0 16px 16px",
+        border: `1px solid ${isComplete ? tc.gold : "rgba(201,168,76,0.12)"}`,
+        borderTop: "none",
+        overflow: "hidden",
+        boxShadow: isComplete ? `0 0 30px ${tc.gold}40` : "0 8px 32px rgba(0,0,0,0.5)",
+        transition: `background-color 0.4s ${LUXURY_EASE}, box-shadow 0.4s ${LUXURY_EASE}`,
+      }}>
+        {/* Gold fill behind knob */}
+        {!isComplete && (
+          <motion.div style={{
+            position: "absolute", top: 0, left: 0, bottom: 0,
+            background: `linear-gradient(90deg, ${tc.gold}50, ${tc.gold}90)`,
+            width: fillWidth,
+          }} />
+        )}
+
+        {/* Completed state */}
+        {isComplete ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ color: "#0D0D1F", fontWeight: 800, fontSize: 16, letterSpacing: "0.05em" }}>
+              Completed! 🎉
+            </span>
+          </motion.div>
+        ) : (
+          <>
+            {/* Hint text */}
+            <motion.span style={{
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "rgba(201,168,76,0.35)", fontSize: 13, fontWeight: 600,
+              letterSpacing: "0.08em", pointerEvents: "none",
+              opacity: arrowOpacity,
+            }}>
+              Slide to complete →
+            </motion.span>
+
+            {/* Draggable knob */}
+            <motion.div
+              drag="x"
+              dragConstraints={{ left: 0, right: swipeMax }}
+              dragElastic={0.05}
+              dragSnapToOrigin={true}
+              onDragEnd={onDragEnd}
+              style={{
+                x,
+                position: "absolute",
+                top: SWIPE_PAD, left: SWIPE_PAD,
+                width: SWIPE_KNOB_SIZE, height: SWIPE_KNOB_SIZE,
+                borderRadius: "50%",
+                backgroundColor: tc.gold,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: checking ? "not-allowed" : "grab",
+                boxShadow: `0 2px 12px ${tc.gold}60`,
+                opacity: knobOpacity,
+                zIndex: 2,
+              }}
+              whileDrag={{ scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span style={{ color: "#0D0D1F", fontSize: 18, fontWeight: 900, letterSpacing: -1, userSelect: "none" }}>❯❯</span>
+            </motion.div>
+          </>
+        )}
+
+        {/* Shimmer on completed */}
+        {isComplete && (
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)", backgroundSize: "300% auto", animation: "shimmer 2.8s linear infinite" }} />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1236,8 +1427,6 @@ function DailyQuote({ lang, tc }: { lang: Lang; tc: TC }) {
   const quotes = MOTIVATIONAL_QUOTES[lang];
   const todayIndex = new Date().getDate() % quotes.length;
   const quote = quotes[todayIndex];
-  const isRtl = lang === "he";
-
   return (
     <div style={{
       width: "100%",
@@ -1252,8 +1441,8 @@ function DailyQuote({ lang, tc }: { lang: Lang; tc: TC }) {
       {/* Decorative opening quote */}
       <span style={{
         position: "absolute",
-        left: isRtl ? "auto" : 0,
-        right: isRtl ? 0 : "auto",
+        left: 0,
+        right: "auto",
         top: -4,
         fontSize: 48,
         lineHeight: 1,
@@ -1275,7 +1464,7 @@ function DailyQuote({ lang, tc }: { lang: Lang; tc: TC }) {
         lineHeight: 1.6,
         margin: 0,
         padding: "0 28px",
-        direction: isRtl ? "rtl" : "ltr",
+        direction: "ltr",
         textShadow: "0 2px 12px rgba(201,168,76,0.35), 0 1px 4px rgba(0,0,0,0.5)",
       }}>
         {quote}
@@ -1342,22 +1531,22 @@ function ProfileTab({
           { label: t.dayStreak, value: profile.current_streak, icon: "🔥" },
           { label: t.longestStreak, value: profile.longest_streak, icon: "🏆" },
         ].map(stat => (
-          <div key={stat.label} style={{ flex: 1, backgroundColor: tc.card, border: `1px solid ${tc.border}`, borderRadius: 16, padding: "18px 16px", textAlign: "center", backdropFilter: "blur(8px)" }}>
+          <div key={stat.label} style={{ flex: 1, ...GLASS, borderRadius: 16, padding: "18px 16px", textAlign: "center" }}>
             <div style={{ fontSize: 28, marginBottom: 4 }}>{stat.icon}</div>
-            <div style={{ fontFamily: CINZEL, color: tc.goldLight, fontSize: 36, fontWeight: 900, lineHeight: 1 }}>{stat.value}</div>
-            <div style={{ color: tc.textSub, fontSize: 11, fontWeight: 600, marginTop: 4, letterSpacing: "0.1em" }}>{stat.label}</div>
+            <div style={{ fontFamily: CINZEL, color: "#C9A84C", fontSize: 36, fontWeight: 900, lineHeight: 1 }}>{stat.value}</div>
+            <div style={{ fontFamily: CINZEL, color: tc.textSub, fontSize: 11, fontWeight: 600, marginTop: 4, letterSpacing: "0.1em" }}>{stat.label}</div>
           </div>
         ))}
       </div>
 
       {/* XP Bar */}
-      <div style={{ backgroundColor: tc.card, border: `1px solid ${tc.border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 20, animation: "fadeIn 0.4s 0.15s ease-out both" }}>
+      <div style={{ ...GLASS, borderRadius: 16, padding: "18px 20px", marginBottom: 20, animation: "fadeIn 0.4s 0.15s ease-out both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontFamily: CINZEL, color: tc.gold, fontSize: 14, fontWeight: 700 }}>{t.level} {profile.level}</span>
+          <span style={{ fontFamily: CINZEL, color: "#C9A84C", fontSize: 14, fontWeight: 700 }}>{t.level} {profile.level}</span>
           <span style={{ color: tc.textSub, fontSize: 12 }}>{xpInLvl} / {XP_PER_LEVEL} XP · {Math.round(xpPct)}%</span>
         </div>
-        <div style={{ height: 10, borderRadius: 999, backgroundColor: tc.xpTrack, overflow: "hidden" }}>
-          <div style={{ height: "100%", borderRadius: 999, background: `linear-gradient(90deg, ${tc.gold}, ${tc.goldLight})`, width: xpAnimated ? `${xpPct}%` : "0%", transition: "width 1.4s cubic-bezier(0.4,0,0.2,1)" }} />
+        <div style={{ height: 10, borderRadius: 999, backgroundColor: tc.xpTrack, overflow: "hidden", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5), 0 0 12px rgba(201,168,76,0.2)" }}>
+          <div style={{ height: "100%", borderRadius: 999, background: `linear-gradient(90deg, ${tc.gold}, ${tc.goldLight})`, width: xpAnimated ? `${xpPct}%` : "0%", transition: `width 1.4s ${LUXURY_EASE}` }} />
         </div>
         <div style={{ color: tc.textSub, fontSize: 11, marginTop: 8, textAlign: "center" }}>
           {xpToNext} XP {t.xpToNext} {profile.level + 1}
@@ -1378,7 +1567,7 @@ function ProfileTab({
       {showChangeHabit && (
         <ChangeHabitModal
           profile={profile}
-          tc={tc} t={t} lang={lang}
+          tc={tc} t={t}
           onClose={() => setShowChangeHabit(false)}
           onSave={(newHabit) => setProfile({ ...profile, habit_type: newHabit })}
         />
@@ -1419,13 +1608,11 @@ function MonthCalendar({ uid, tc, t, lang }: { uid: string; tc: TC; t: TT; lang:
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
-  const dayLabels = lang === "he"
-    ? ["א","ב","ג","ד","ה","ו","ש"]
-    : ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const dayLabels = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
   return (
-    <div style={{ backgroundColor: tc.card, border: `1px solid ${tc.border}`, borderRadius: 16, padding: "18px 16px", animation: "fadeIn 0.4s 0.25s ease-out both" }}>
-      <div style={{ fontFamily: CINZEL, color: tc.gold, fontSize: 14, fontWeight: 700, marginBottom: 14, textAlign: "center", letterSpacing: "0.08em" }}>
+    <div style={{ ...GLASS, borderRadius: 16, padding: "18px 16px", animation: "fadeIn 0.4s 0.25s ease-out both" }}>
+      <div style={{ fontFamily: CINZEL, color: "#C9A84C", fontSize: 14, fontWeight: 700, marginBottom: 14, textAlign: "center", letterSpacing: "0.08em" }}>
         {t.currentMonth} — {monthName} {year}
       </div>
       {/* Day labels */}
@@ -1444,14 +1631,14 @@ function MonthCalendar({ uid, tc, t, lang }: { uid: string; tc: TC; t: TT; lang:
             <div key={i} style={{
               aspectRatio: "1",
               borderRadius: 8,
-              backgroundColor: day === null ? "transparent" : done ? `${tc.gold}cc` : tc.calEmpty,
-              border: day === null ? "none" : isToday ? `1.5px solid ${tc.gold}` : `1px solid ${done ? tc.gold : tc.calBorder}`,
+              background: day === null ? "transparent" : done ? "linear-gradient(135deg, #C9A84C, #A8872E)" : tc.calEmpty,
+              border: day === null ? "none" : isToday ? `1.5px solid #C9A84C` : `1px solid ${done ? "#C9A84C" : tc.calBorder}`,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 10, fontWeight: done ? 800 : 500,
-              color: done ? tc.bg : isToday ? tc.gold : tc.textSub,
+              color: done ? tc.bg : isToday ? "#C9A84C" : tc.textSub,
               opacity: animated ? 1 : 0,
               transform: animated ? "scale(1)" : "scale(0.4)",
-              transition: `opacity 0.35s ${delay}s ease-out, transform 0.35s ${delay}s ease-out`,
+              transition: `opacity 0.35s ${delay}s ${LUXURY_EASE}, transform 0.35s ${delay}s ${LUXURY_EASE}`,
             }}>
               {day}
             </div>
@@ -1466,9 +1653,9 @@ function MonthCalendar({ uid, tc, t, lang }: { uid: string; tc: TC; t: TT; lang:
 // Change Habit Modal
 // ─────────────────────────────────────────────────────────────────────────────
 function ChangeHabitModal({
-  profile, tc, t, lang, onClose, onSave,
+  profile, tc, t, onClose, onSave,
 }: {
-  profile: Profile; tc: TC; t: TT; lang: Lang;
+  profile: Profile; tc: TC; t: TT;
   onClose: () => void; onSave: (habit: string) => void;
 }) {
   const [selected, setSelected] = useState(profile.habit_type);
@@ -1476,10 +1663,20 @@ function ChangeHabitModal({
 
   async function handleSave() {
     setSaving(true);
-    await supabase.from("profiles").update({ habit_type: selected }).eq("id", profile.id);
-    setSaving(false);
-    onSave(selected);
-    onClose();
+    try {
+      const { error } = await supabase.from("profiles").update({ habit_type: selected }).eq("id", profile.id);
+      if (error) {
+        console.error("Change habit error:", error.message);
+        setSaving(false);
+        return;
+      }
+      onSave(selected);
+      onClose();
+    } catch (e) {
+      console.error("Change habit exception:", e);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -1495,7 +1692,7 @@ function ChangeHabitModal({
               className="btn-gold"
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "18px 12px", borderRadius: 16, cursor: "pointer", backgroundColor: selected === h.value ? `${tc.gold}18` : tc.bg, border: `2px solid ${selected === h.value ? tc.gold : tc.border}`, transform: selected === h.value ? "scale(1.03)" : "scale(1)", transition: "all 0.2s ease" }}>
               <span style={{ fontSize: 30 }}>{h.emoji}</span>
-              <span style={{ color: tc.gold, fontSize: 13, fontWeight: 700 }}>{lang === "he" ? h.label : h.labelEn}</span>
+              <span style={{ color: tc.gold, fontSize: 13, fontWeight: 700 }}>{h.labelEn}</span>
             </button>
           ))}
         </div>
@@ -1518,10 +1715,10 @@ function ChangeHabitModal({
 // Settings Tab
 // ─────────────────────────────────────────────────────────────────────────────
 function SettingsTab({
-  user, onSignOut, tc, t, lang, themeKey, onChangeLang, onChangeTheme,
+  user, onSignOut, tc, t, themeKey, onChangeTheme,
 }: {
-  user: User; onSignOut: () => void; tc: TC; t: TT; lang: Lang;
-  themeKey: ThemeKey; onChangeLang: (l: Lang) => void; onChangeTheme: (k: ThemeKey) => void;
+  user: User; onSignOut: () => void; tc: TC; t: TT;
+  themeKey: ThemeKey; onChangeTheme: (k: ThemeKey) => void;
 }) {
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderHour, setReminderHour] = useState(20);
@@ -1530,7 +1727,6 @@ function SettingsTab({
   const [notifUnsupported, setNotifUnsupported] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [platform, setPlatform] = useState<"ios" | "android" | "desktop">("desktop");
-  const isHe = lang === "he";
 
   useEffect(() => {
     const savedReminder = localStorage.getItem("hr-reminder");
@@ -1580,19 +1776,20 @@ function SettingsTab({
             applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
           });
           const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          await supabase.from("push_subscriptions").upsert({
+          const { error: upsertErr } = await supabase.from("push_subscriptions").upsert({
             user_id: user.id,
             subscription: sub.toJSON(),
             reminder_hour: reminderHour,
             timezone,
           }, { onConflict: "user_id" });
+          if (upsertErr) console.error("Supabase upsert error:", upsertErr);
           setReminderEnabled(true);
           localStorage.setItem("hr-reminder", "1");
         } else if (perm === "denied") {
           setNotifBlocked(true);
         }
       }
-    } catch { /* ignore */ }
+    } catch (err) { console.error("Push subscription error:", err); }
     setPushLoading(false);
   }
 
@@ -1612,24 +1809,12 @@ function SettingsTab({
         {t.settings}
       </h1>
 
-      {/* Language */}
-      <SettingCard label={t.language} tc={tc} delay={0}>
-        <div style={{ display: "flex", borderRadius: 12, overflow: "hidden", border: `1px solid ${tc.border}` }}>
-          {(["he", "en"] as Lang[]).map(l => (
-            <button key={l} onClick={() => onChangeLang(l)} className="btn-gold"
-              style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", backgroundColor: lang === l ? tc.gold : "transparent", color: lang === l ? (themeKey === "dark" ? "#0D0D1F" : "#FFFDF8") : tc.textSub, transition: "all 0.2s ease" }}>
-              {l === "he" ? "עברית" : "English"}
-            </button>
-          ))}
-        </div>
-      </SettingCard>
-
       {/* Dark / Light mode */}
       <SettingCard label={t.darkMode} tc={tc} delay={0.07}>
         <div style={{ display: "flex", borderRadius: 12, overflow: "hidden", border: `1px solid ${tc.border}` }}>
           {(["dark", "light"] as ThemeKey[]).map(k => (
             <button key={k} onClick={() => onChangeTheme(k)} className="btn-gold"
-              style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", backgroundColor: themeKey === k ? tc.gold : "transparent", color: themeKey === k ? (themeKey === "dark" ? "#0D0D1F" : "#FFFDF8") : tc.textSub, transition: "all 0.2s ease" }}>
+              style={{ flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: themeKey === k ? "linear-gradient(135deg, #C9A84C, #A8872E)" : "transparent", color: themeKey === k ? "#080810" : tc.textSub, transition: "all 0.2s ease" }}>
               {k === "dark" ? "🌙 Dark" : "☀️ Light"}
             </button>
           ))}
@@ -1637,14 +1822,14 @@ function SettingsTab({
       </SettingCard>
 
       {/* Daily Reminder */}
-      <SettingCard label={isHe ? "תזכורת יומית" : "Daily Reminder"} tc={tc} delay={0.14}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", direction: isHe ? "rtl" : "ltr" }}>
+      <SettingCard label="Daily Reminder" tc={tc} delay={0.14}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", direction: "ltr" }}>
           <div>
             <div style={{ color: tc.text, fontSize: 14, fontWeight: 600 }}>
-              {isHe ? "קבל תזכורת יומית" : "Get daily reminder"}
+              Get daily reminder
             </div>
             <div style={{ color: tc.textSub, fontSize: 11, marginTop: 2 }}>
-              {isHe ? "כדי לא לשכוח לסמן את ההרגל" : "So you don't forget your habit"}
+              So you don&apos;t forget your habit
             </div>
           </div>
           <button
@@ -1652,8 +1837,8 @@ function SettingsTab({
             disabled={pushLoading || notifBlocked || notifUnsupported}
             style={{
               width: 52, height: 30, borderRadius: 15, border: "none", cursor: (notifBlocked || notifUnsupported) ? "not-allowed" : "pointer",
-              backgroundColor: reminderEnabled ? tc.gold : tc.toggleOff,
-              position: "relative", transition: "background-color 0.3s ease", flexShrink: 0,
+              background: reminderEnabled ? "linear-gradient(135deg, #C9A84C, #A8872E)" : tc.toggleOff,
+              position: "relative", transition: "background 0.3s ease", flexShrink: 0,
               opacity: (pushLoading || notifBlocked || notifUnsupported) ? 0.4 : 1,
             }}>
             <div style={{
@@ -1667,34 +1852,30 @@ function SettingsTab({
         </div>
         {/* Warning: notifications blocked */}
         {notifBlocked && (
-          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, backgroundColor: "rgba(255,80,80,0.08)", border: "1px solid rgba(255,80,80,0.2)", direction: isHe ? "rtl" : "ltr" }}>
+          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, backgroundColor: "rgba(255,80,80,0.08)", border: "1px solid rgba(255,80,80,0.2)", direction: "ltr" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 16 }}>🚫</span>
               <div style={{ color: "#ff6b6b", fontSize: 12, fontWeight: 600, lineHeight: 1.4 }}>
-                {isHe
-                  ? "ההתראות חסומות בדפדפן. כדי להפעיל, עבור להגדרות הדפדפן ← אתר זה ← הרשאות ← התראות ← אפשר."
-                  : "Notifications are blocked. To enable, go to Browser Settings → This Site → Permissions → Notifications → Allow."}
+                Notifications are blocked. To enable, go to Browser Settings → This Site → Permissions → Notifications → Allow.
               </div>
             </div>
           </div>
         )}
         {/* Warning: notifications not supported */}
         {notifUnsupported && (
-          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, backgroundColor: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.2)", direction: isHe ? "rtl" : "ltr" }}>
+          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, backgroundColor: "rgba(255,165,0,0.08)", border: "1px solid rgba(255,165,0,0.2)", direction: "ltr" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 16 }}>⚠️</span>
               <div style={{ color: "#e6a400", fontSize: 12, fontWeight: 600, lineHeight: 1.4 }}>
-                {isHe
-                  ? "הדפדפן שלך לא תומך בהתראות. נסה לפתוח מ-Safari או Chrome."
-                  : "Your browser does not support notifications. Try opening from Safari or Chrome."}
+                Your browser does not support notifications. Try opening from Safari or Chrome.
               </div>
             </div>
           </div>
         )}
         {reminderEnabled && (
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${tc.border}` }}>
-            <div style={{ color: tc.textSub, fontSize: 11, fontWeight: 600, marginBottom: 8, direction: isHe ? "rtl" : "ltr" }}>
-              {isHe ? "שעת תזכורת:" : "Reminder time:"}
+            <div style={{ color: tc.textSub, fontSize: 11, fontWeight: 600, marginBottom: 8, direction: "ltr" }}>
+              Reminder time:
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(70px, 1fr))", gap: "8px", width: "100%" }}>
               {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22].map(h => (
@@ -1715,31 +1896,31 @@ function SettingsTab({
       </SettingCard>
 
       {/* Smart App Installation */}
-      <SettingCard label={isHe ? "התקנת האפליקציה" : "Install App"} tc={tc} delay={0.21}>
-        <div style={{ direction: isHe ? "rtl" : "ltr" }}>
+      <SettingCard label="Install App" tc={tc} delay={0.21}>
+        <div style={{ direction: "ltr" }}>
           {isStandalone ? (
             /* App is already installed */
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "16px 0" }}>
               <div style={{ width: 48, height: 48, borderRadius: "50%", background: `linear-gradient(135deg, ${tc.gold}30, ${tc.gold}15)`, border: `2px solid ${tc.gold}50`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>✅</div>
               <div style={{ color: tc.gold, fontSize: 16, fontWeight: 700, fontFamily: CINZEL }}>
-                {isHe ? "האפליקציה מותקנת!" : "App is installed!"}
+                App is installed!
               </div>
               <div style={{ color: tc.textSub, fontSize: 12, textAlign: "center" }}>
-                {isHe ? "את/ה משתמש/ת בגרסה המלאה של HabitRise" : "You're using the full version of HabitRise"}
+                You&apos;re using the full version of HabitRise
               </div>
             </div>
           ) : platform === "ios" ? (
             /* iOS Safari installation guide */
             <>
               <div style={{ color: tc.text, fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-                {isHe ? "iPhone / iPad (Safari):" : "iPhone / iPad (Safari):"}
+                iPhone / iPad (Safari):
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { num: 1, text: isHe ? 'לחץ על כפתור "שיתוף" (⬆️) בתחתית Safari' : 'Tap the "Share" button (⬆️) at the bottom of Safari' },
-                  { num: 2, text: isHe ? 'גלול למטה ובחר "הוסף למסך הבית"' : 'Scroll down and select "Add to Home Screen"' },
-                  { num: 3, text: isHe ? 'לחץ "הוסף" בפינה הימנית העליונה' : 'Tap "Add" in the top right corner' },
-                  { num: 4, text: isHe ? "האפליקציה תופיע במסך הבית שלך!" : "The app will appear on your home screen!" },
+                  { num: 1, text: 'Tap the "Share" button (⬆️) at the bottom of Safari' },
+                  { num: 2, text: 'Scroll down and select "Add to Home Screen"' },
+                  { num: 3, text: 'Tap "Add" in the top right corner' },
+                  { num: 4, text: "The app will appear on your home screen!" },
                 ].map(step => (
                   <div key={step.num} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                     <div style={{
@@ -1762,14 +1943,14 @@ function SettingsTab({
             /* Android Chrome installation guide */
             <>
               <div style={{ color: tc.text, fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-                {isHe ? "Android (Chrome):" : "Android (Chrome):"}
+                Android (Chrome):
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { num: 1, text: isHe ? 'לחץ על תפריט ⋮ (שלוש נקודות) בפינה העליונה' : 'Tap the ⋮ menu (three dots) in the top corner' },
-                  { num: 2, text: isHe ? 'בחר "הוסף למסך הבית" או "התקן אפליקציה"' : 'Select "Add to Home Screen" or "Install App"' },
-                  { num: 3, text: isHe ? 'אשר את ההתקנה' : 'Confirm the installation' },
-                  { num: 4, text: isHe ? "האפליקציה תופיע במסך הבית שלך!" : "The app will appear on your home screen!" },
+                  { num: 1, text: 'Tap the ⋮ menu (three dots) in the top corner' },
+                  { num: 2, text: 'Select "Add to Home Screen" or "Install App"' },
+                  { num: 3, text: 'Confirm the installation' },
+                  { num: 4, text: "The app will appear on your home screen!" },
                 ].map(step => (
                   <div key={step.num} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                     <div style={{
@@ -1792,13 +1973,13 @@ function SettingsTab({
             /* Desktop browser */
             <>
               <div style={{ color: tc.text, fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-                {isHe ? "מחשב (Chrome / Edge):" : "Desktop (Chrome / Edge):"}
+                Desktop (Chrome / Edge):
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { num: 1, text: isHe ? "חפש את אייקון ההתקנה (⊕) בשורת הכתובת" : 'Look for the install icon (⊕) in the address bar' },
-                  { num: 2, text: isHe ? 'לחץ עליו ובחר "התקן"' : 'Click it and select "Install"' },
-                  { num: 3, text: isHe ? "האפליקציה תיפתח כחלון נפרד!" : "The app will open as a standalone window!" },
+                  { num: 1, text: 'Look for the install icon (⊕) in the address bar' },
+                  { num: 2, text: 'Click it and select "Install"' },
+                  { num: 3, text: "The app will open as a standalone window!" },
                 ].map(step => (
                   <div key={step.num} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                     <div style={{
@@ -1826,9 +2007,7 @@ function SettingsTab({
             }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
               <div style={{ color: tc.textSub, fontSize: 12, lineHeight: 1.5 }}>
-                {isHe
-                  ? "התקנת האפליקציה מאפשרת חוויה מלאה כמו אפליקציה רגילה — עם אייקון במסך הבית, מסך מלא, ותזכורות."
-                  : "Installing the app gives you a full app experience — with a home screen icon, full screen mode, and reminders."}
+                Installing the app gives you a full app experience — with a home screen icon, full screen mode, and reminders.
               </div>
             </div>
           )}
@@ -1838,9 +2017,20 @@ function SettingsTab({
       {/* Sign Out */}
       <div style={{ animation: "fadeIn 0.4s 0.28s ease-out both" }}>
         <button onClick={onSignOut} className="btn-gold"
-          style={{ width: "100%", marginTop: 12, padding: "16px", borderRadius: 16, border: `1.5px solid rgba(255,80,80,0.35)`, backgroundColor: "transparent", color: "#ff6b6b", fontWeight: 700, fontSize: 15, fontFamily: CINZEL, cursor: "pointer", letterSpacing: "0.05em" }}>
+          style={{ width: "100%", marginTop: 12, padding: "16px", borderRadius: 16, background: tc.card2, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: `1.5px solid rgba(255,80,80,0.25)`, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", color: "#ff6b6b", fontWeight: 700, fontSize: 15, fontFamily: CINZEL, cursor: "pointer", letterSpacing: "0.05em" }}>
           {t.signOut}
         </button>
+      </div>
+
+      {/* Privacy Policy & Terms */}
+      <div style={{ textAlign: "center", marginTop: 24, display: "flex", justifyContent: "center", gap: 16, animation: "fadeIn 0.4s 0.35s ease-out both" }}>
+        <a href="/privacy" style={{ color: tc.gold, opacity: 0.6, fontSize: 13, textDecoration: "none" }}>
+          Privacy Policy
+        </a>
+        <span style={{ color: tc.gold, opacity: 0.3, fontSize: 13 }}>·</span>
+        <a href="/terms" style={{ color: tc.gold, opacity: 0.6, fontSize: 13, textDecoration: "none" }}>
+          Terms of Service
+        </a>
       </div>
     </main>
   );
@@ -1848,8 +2038,8 @@ function SettingsTab({
 
 function SettingCard({ label, tc, delay, children }: { label: string; tc: TC; delay: number; children: React.ReactNode }) {
   return (
-    <div style={{ backgroundColor: tc.card, border: `1px solid ${tc.border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 12, animation: `fadeIn 0.4s ${delay}s ease-out both` }}>
-      <div style={{ color: tc.textSub, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>{label}</div>
+    <div style={{ ...GLASS, borderRadius: 16, padding: "18px 20px", marginBottom: 12, animation: `fadeIn 0.4s ${delay}s ease-out both` }}>
+      <div style={{ fontFamily: CINZEL, color: tc.textSub, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>{label}</div>
       {children}
     </div>
   );

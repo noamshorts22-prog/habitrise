@@ -16,7 +16,19 @@
       "Bash(cd:*)",
       "Bash(npm run:*)",
       "Bash(npx vercel:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)",
+      "Bash(start:*)",
+      "Bash(claude mcp:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(taskkill //f //im chrome.exe)",
+      "Bash(cmd /c start \"\" \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" --incognito \"http://localhost:3000\")",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -rf .next)",
+      "Bash(npx kill-port:*)",
+      "Bash(taskkill //F //FI \"WINDOWTITLE eq next-server\")",
+      "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\")"
     ]
   }
 }
