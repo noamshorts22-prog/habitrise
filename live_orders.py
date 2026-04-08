@@ -8,7 +8,7 @@ Order flow:
   1. Fetch current market price via IBKR snapshot
   2. Parent: LMT BUY at current_price * 1.003 (0.3% above — ensures fill)
   3. Child:  TRAIL STOP SELL with auxPrice = trailing amount
-  4. transmit=False on parent, transmit=True on child → atomic submission
+  4. transmit=False on parent, transmit=True on child -> atomic submission
 """
 
 import asyncio
@@ -51,12 +51,13 @@ def section(text: str) -> None:
 def fetch_current_price(ib: IB, contract: Stock) -> float:
     """Fetch the current market price via IBKR snapshot data.
 
-    Requests a market data snapshot (no streaming subscription needed),
-    waits up to 5 seconds for the ticker to populate, then returns
-    the last price. Falls back to close price if last is unavailable.
+    Tries live snapshot first. If the account lacks live market data
+    subscription (Error 10089), falls back to delayed data (reqMarketDataType 3).
+    Ultimate fallback: Yahoo Finance last close.
     """
+    # Try live snapshot first
     ticker = ib.reqMktData(contract, "", True, False)  # snapshot=True
-    ib.sleep(2)  # allow time for snapshot to arrive
+    ib.sleep(2)
 
     price = ticker.last
     if price is None or price != price:  # NaN check
@@ -65,6 +66,34 @@ def fetch_current_price(ib: IB, contract: Stock) -> float:
         price = ticker.marketPrice()
 
     ib.cancelMktData(contract)
+
+    # If live failed, try delayed data
+    if not price or price != price or price <= 0:
+        ib.reqMarketDataType(3)  # switch to delayed
+        ticker = ib.reqMktData(contract, "", True, False)
+        ib.sleep(2)
+
+        price = ticker.last
+        if price is None or price != price:
+            price = ticker.close
+        if price is None or price != price:
+            price = ticker.marketPrice()
+
+        ib.cancelMktData(contract)
+        ib.reqMarketDataType(1)  # switch back to live
+
+    # Ultimate fallback: Yahoo Finance
+    if not price or price != price or price <= 0:
+        try:
+            import yfinance as yf
+            df = yf.download(contract.symbol, period="5d", auto_adjust=True, progress=False)
+            if hasattr(df.columns, 'get_level_values'):
+                df.columns = df.columns.get_level_values(0)
+            price = float(df["Close"].iloc[-1])
+            print(f"    (price via Yahoo Finance fallback)")
+        except Exception:
+            price = 0.0
+
     return float(price) if price and price == price else 0.0
 
 
@@ -76,11 +105,11 @@ def create_bracket_order(
 ) -> list[Order]:
     """Create a 2-leg bracket: Marketable Limit Entry + Trailing Stop.
 
-    Leg 1 (Parent):  Limit BUY at limit_price (0.3% above market → fills immediately).
+    Leg 1 (Parent):  Limit BUY at limit_price (0.3% above market -> fills immediately).
     Leg 2 (Child):   Trailing Stop SELL with auxPrice = trailing distance in dollars.
 
-    transmit=False on parent → order is held until child transmits.
-    transmit=True on child   → fires the entire group atomically.
+    transmit=False on parent -> order is held until child transmits.
+    transmit=True on child   -> fires the entire group atomically.
     """
     # ── Parent: Marketable Limit Entry ────────────────────────────────
     parent = Order()
@@ -139,7 +168,7 @@ def main() -> None:
         price = fetch_current_price(ib, contract)
         lmt = round(price * (1 + LMT_BUFFER_PCT), 2)
 
-        print(f"  [{ticker}] Current: ${price:,.2f}  →  Limit: ${lmt:,.2f}  "
+        print(f"  [{ticker}] Current: ${price:,.2f}  ->  Limit: ${lmt:,.2f}  "
               f"(+{LMT_BUFFER_PCT * 100:.1f}%)  Trail: ${target['trailing_amt']:.2f}")
 
         order_plan.append({**target, "contract": contract, "price": price, "lmt": lmt})
@@ -252,7 +281,7 @@ def main() -> None:
     print(f"  Order flow:")
     print(f"    1. LMT BUY fills immediately (0.3% above market)")
     print(f"    2. TRAIL STOP activates, follows price up")
-    print(f"    3. If price drops by trail amount → SELL triggered")
+    print(f"    3. If price drops by trail amount -> SELL triggered")
     print(f"  Monitor positions in TWS or IB Gateway.")
     print(f"{'=' * 78}\n")
 
